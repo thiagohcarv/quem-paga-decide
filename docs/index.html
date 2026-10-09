@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quem Paga Decide</title>
+<meta name="description" content="Projetos, patrimônio declarado, tempo de mandato e processos de cada deputado e senador, com dados oficiais.">
+<style>
+/* Minimalista: fundo liso, uma coluna, linhas finas. Verde e amarelo só nos detalhes. */
+:root {
+  --fundo: #ffffff; --tinta: #111411; --suave: #5f665f; --linha: #e2e5e2;
+  --verde: #00843d; --verde-claro: #e3f3e9; --amarelo: #ffd400; --amarelo-claro: #fff4b8;
+  --fonte: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #0d100e; --tinta: #eef1ee; --suave: #98a198; --linha: #262b27;
+    --verde: #3fcf7f; --verde-claro: #12301f; --amarelo: #ffd400; --amarelo-claro: #3a3200;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fundo); color: var(--tinta); font: 16px/1.55 var(--fonte);
+  border-top: 6px solid var(--verde); }
+body::before { content: ""; display: block; height: 3px; background: var(--amarelo); }
+.pagina { max-width: 760px; margin: 0 auto; padding-inline: 20px; padding-block: 48px 72px; display: grid; gap: 32px; }
+h1 { font-size: clamp(1.9rem, 6vw, 2.8rem); font-weight: 700; line-height: 1.08; margin: 0; letter-spacing: -.02em; text-wrap: balance; }
+h1 em { font-style: normal; background: linear-gradient(transparent 62%, var(--amarelo) 62%); }
+@media (prefers-color-scheme: dark) { h1 em { background: none; color: var(--amarelo); } }
+.sub { color: var(--suave); max-width: 58ch; margin: 14px 0 0; }
+.placar { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 20px 24px;
+  border-block: 1px solid var(--linha); padding-block: 20px; }
+.placar b { display: block; font: 500 1.6rem/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.placar span { font-size: .78rem; color: var(--suave); text-transform: uppercase; letter-spacing: .07em; }
+.filtros { display: flex; flex-wrap: wrap; gap: 8px; }
+.filtros input, .filtros select { font: inherit; color: inherit; background: var(--fundo); border: 1px solid var(--linha);
+  border-radius: 2px; padding: 9px 10px; min-width: 0; }
+.filtros input { flex: 1 1 100%; border-color: var(--tinta); }
+.filtros select { flex: 1 1 150px; }
+:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+.contagem { color: var(--suave); font-size: .88rem; margin: 0; }
+.lista { display: grid; }
+.ficha { border-top: 1px solid var(--linha); }
+.ficha:last-child { border-bottom: 1px solid var(--linha); }
+.ficha[open] { border-top-color: var(--verde); }
+.ficha summary { list-style: none; cursor: pointer; padding-block: 18px; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; align-items: start; }
+.ficha summary::-webkit-details-marker { display: none; }
+.foto { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--linha); }
+.nome { font-weight: 600; font-size: 1.05rem; margin: 0; overflow-wrap: anywhere; }
+.meta { color: var(--suave); font-size: .86rem; margin: 2px 0 10px; }
+.pilulas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.pilula { font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px;
+  border-radius: 2px; border: 1px solid var(--linha); color: var(--suave); }
+.pilula.verde { background: var(--verde-claro); border-color: transparent; color: var(--verde); }
+.pilula.laranja { background: var(--amarelo-claro); border-color: transparent; color: var(--tinta); }
+.numeros { display: flex; flex-wrap: wrap; gap: 8px 28px; }
+.numeros div { font-size: .8rem; color: var(--suave); }
+.numeros b { display: block; font: 500 1.2rem/1.2 var(--mono); color: var(--tinta); font-variant-numeric: tabular-nums; }
+.detalhe { padding: 0 0 22px 60px; display: grid; gap: 18px; }
+@media (max-width: 520px) { .detalhe { padding-left: 0; } }
+.detalhe h3 { font-size: .76rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--suave); margin: 0 0 8px; }
+.detalhe ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.detalhe li { font-size: .92rem; }
+.detalhe li span { color: var(--suave); display: block; font-size: .8rem; }
+a { color: var(--verde); text-underline-offset: 3px; }
+.aviso { border-left: 3px solid var(--amarelo); padding: 4px 0 4px 14px; font-size: .92rem; margin: 0; }
+button.mais { font: inherit; font-weight: 600; color: var(--fundo); background: var(--verde); border: 0; border-radius: 2px;
+  padding: 11px 20px; cursor: pointer; justify-self: start; }
+footer { color: var(--suave); font-size: .84rem; display: grid; gap: 10px; }
+footer ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+footer p { margin: 0; }
+[hidden] { display: none !important; }
+.filtros select { flex: 1 1 170px; }
+.limpar { font: inherit; color: var(--suave); background: none; border: 0; padding: 9px 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.grafico { display: grid; gap: 12px; }
+.grafico-topo { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.grafico h2 { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--suave); margin: 0; }
+.grafico select { font: inherit; color: inherit; background: var(--fundo); border: 1px solid var(--linha); border-radius: 2px; padding: 7px 10px; max-width: 100%; }
+#barras { display: grid; gap: 2px; }
+.barra { font: inherit; color: inherit; background: none; border: 0; padding: 5px 0; cursor: pointer; text-align: left;
+  display: grid; grid-template-columns: 5.5em minmax(0, 1fr) 6.5em; gap: 10px; align-items: center; }
+.b-rotulo { font-size: .86rem; font-weight: 600; overflow-wrap: anywhere; }
+.b-trilho { display: block; height: 10px; background: var(--linha); }
+.b-fill { display: block; height: 100%; background: var(--verde); }
+.barra:hover .b-fill, .barra.ativa .b-fill { background: var(--amarelo); }
+.barra.ativa .b-rotulo { text-decoration: underline; text-decoration-color: var(--amarelo); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+.b-valor { font: 500 .86rem var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.nota, .vazio { color: var(--suave); font-size: .84rem; margin: 0; }
+.detalhe .vazio { margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <header>
+    <h1>O que eles fizeram com o <em>seu voto</em></h1>
+    <p class="sub">Projetos, patrimônio declarado, tempo de mandato e processos de cada deputado e senador. Dados oficiais da Câmara, do Senado e do TSE, de 2023 em diante.</p>
+  </header>
+
+  <section class="placar" aria-label="Resumo do recorte atual">
+    <div><b id="n-total">–</b><span>Parlamentares</span></div>
+    <div><b id="n-projetos">–</b><span>Projetos apresentados</span></div>
+    <div><b id="n-norma">–</b><span>Viraram norma</span></div>
+    <div><b id="n-zero">–</b><span>Sem nenhum projeto</span></div>
+    <div><b id="n-milhao">–</b><span>Declararam mais de R$ 1 milhão</span></div>
+    <div><b id="n-mediana">–</b><span>Patrimônio mediano</span></div>
+  </section>
+
+  <p class="aviso" id="aviso" hidden></p>
+
+  <form class="filtros" id="filtros" onsubmit="return false">
+    <input id="f-busca" type="search" placeholder="Buscar por nome, partido ou estado" aria-label="Buscar por nome, partido ou estado">
+    <select id="f-casa" aria-label="Casa">
+      <option value="">Câmara e Senado</option>
+      <option value="Câmara">Câmara</option>
+      <option value="Senado">Senado</option>
+      <option value="novo">Sem mandato anterior no Congresso</option>
+    </select>
+    <select id="f-partido" aria-label="Partido"><option value="">Todos os partidos</option></select>
+    <select id="f-uf" aria-label="Estado"><option value="">Todos os estados</option></select>
+    <select id="f-eleito" aria-label="Eleição de 2026">
+      <option value="">Eleitos ou não em 2026</option>
+      <option value="sim">Eleitos em 2026</option>
+      <option value="nao">Não eleitos em 2026</option>
+    </select>
+    <select id="f-patrimonio" aria-label="Patrimônio declarado">
+      <option value="">Qualquer patrimônio</option>
+      <option value="a">Até R$ 1 milhão</option>
+      <option value="b">R$ 1 a 5 milhões</option>
+      <option value="c">R$ 5 a 20 milhões</option>
+      <option value="d">Mais de R$ 20 milhões</option>
+      <option value="sem">Sem declaração encontrada</option>
+    </select>
+    <select id="f-tempo" aria-label="Tempo de mandato">
+      <option value="">Qualquer tempo de mandato</option>
+      <option value="a">Até 4 anos</option>
+      <option value="b">5 a 8 anos</option>
+      <option value="c">9 a 16 anos</option>
+      <option value="d">Mais de 16 anos</option>
+    </select>
+    <select id="f-ordem" aria-label="Ordenar">
+      <option value="nome">Ordem alfabética</option>
+      <option value="menos">Menos projetos primeiro</option>
+      <option value="mais">Mais projetos primeiro</option>
+      <option value="norma">Mais projetos que viraram norma</option>
+      <option value="patrimonio">Maior patrimônio declarado</option>
+      <option value="crescimento">Maior crescimento de patrimônio</option>
+      <option value="tempo">Mais tempo de mandato</option>
+      <option value="processos">Mais processos registrados</option>
+    </select>
+    <button type="reset" class="limpar" id="limpar">Limpar filtros</button>
+  </form>
+
+  <section class="grafico" aria-label="Comparação por partido">
+    <div class="grafico-topo">
+      <h2>Por partido</h2>
+      <select id="g-metrica" aria-label="O que comparar">
+        <option value="qtd">Número de parlamentares</option>
+        <option value="proj">Projetos por parlamentar</option>
+        <option value="pat">Patrimônio mediano</option>
+        <option value="mi">Parcela que declarou mais de R$ 1 milhão</option>
+        <option value="tempo">Tempo médio de mandato</option>
+      </select>
+    </div>
+    <div id="barras"></div>
+    <p class="nota" id="g-nota">Clique em um partido para filtrar a lista.</p>
+  </section>
+
+  <p class="contagem" id="contagem"></p>
+  <div class="lista" id="lista"></div>
+  <button class="mais" id="mais" type="button" hidden>Mostrar mais</button>
+
+  <footer>
+    <p id="rodape-status"></p>
+    <ul>
+      <li><strong>Projetos</strong> são PL, PLP e PEC em que o parlamentar assina como autor ou coautor. Requerimentos e outras proposições aparecem só no total geral.</li>
+      <li><strong>Viraram norma</strong> conta os projetos cuja situação oficial é "transformado em norma jurídica". Um projeto pode ser aprovado dentro de outro texto e não aparecer aqui.</li>
+      <li><strong>Patrimônio</strong> é a soma dos bens que o próprio candidato declarou ao TSE em 2018, 2022 e 2026, pelo valor declarado. Não é avaliação de mercado nem patrimônio líquido. O cruzamento é por nome completo e estado; sem correspondência, o campo fica vazio.</li>
+      <li><strong>Tempo de mandato</strong>: para deputados, conta desde a primeira legislatura em que exerceram mandato na Câmara, mesmo com intervalos. Para senadores, desde o início do mandato atual.</li>
+      <li><strong>Processos</strong> são registrados à mão, um a um, com número e link da fonte. Investigado ou réu não é condenado. Ausência de registro não significa ausência de processo.</li>
+      <li>Eleitos em 2026 que não tinham mandato no Congresso aparecem sem produção legislativa: não existe base nacional única de vereadores, deputados estaduais e prefeitos.</li>
+    </ul>
+    <p>Fontes: <a href="https://dadosabertos.camara.leg.br/">Dados Abertos da Câmara</a>, <a href="https://www12.senado.leg.br/dados-abertos">Dados Abertos do Senado</a>, <a href="https://dadosabertos.tse.jus.br/">Portal de Dados Abertos do TSE</a>.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var PASSO = 40, ANO_BASE = 2026, MAX_BARRAS = 14;
+  var todos = [], processos = {}, visiveis = PASSO;
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = new Intl.NumberFormat("pt-BR");
+  var fmt1 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
+
+  function el(tag, classe, texto) {
+    var e = document.createElement(tag);
+    if (classe) e.className = classe;
+    if (texto != null) e.textContent = texto;
+    return e;
+  }
+  function semAcento(s) {
+    return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  }
+  function linkSeguro(url) { return /^https?:\/\//i.test(String(url || "")) ? url : null; }
+  function carregar(arquivo, padrao) {
+    return fetch("dados/" + arquivo, { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .catch(function () { return padrao; });
+  }
+  function reais(v) {
+    if (v == null) return "–";
+    var a = Math.abs(v);
+    if (a >= 1e9) return "R$ " + fmt1.format(v / 1e9) + " bi";
+    if (a >= 1e6) return "R$ " + fmt1.format(v / 1e6) + " mi";
+    if (a >= 1e3) return "R$ " + fmt.format(Math.round(v / 1e3)) + " mil";
+    return "R$ " + fmt.format(Math.round(v));
+  }
+  function mediana(v) {
+    if (!v.length) return null;
+    var s = v.slice().sort(function (a, b) { return a - b; }), m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+
+  // ---- medidas por parlamentar
+  function nProj(p) { return p.producao ? p.producao.projetos : null; }
+  function nNorma(p) { return p.producao ? p.producao.viraram_norma : null; }
+  function nProc(p) { return (processos[p.chave] || []).length; }
+  function anosPat(p) { return Object.keys(p.patrimonio || {}).sort(); }
+  function pat(p) { var k = anosPat(p); return k.length ? p.patrimonio[k[k.length - 1]] : null; }
+  function patAno(p) { var k = anosPat(p); return k.length ? k[k.length - 1] : null; }
+  function crescimento(p) {
+    var k = anosPat(p);
+    if (k.length < 2) return null;
+    var antes = p.patrimonio[k[k.length - 2]], depois = p.patrimonio[k[k.length - 1]];
+    if (!(antes > 0)) return null;
+    return { de: k[k.length - 2], ate: k[k.length - 1], antes: antes, depois: depois, pct: (depois - antes) / antes * 100 };
+  }
+  function tempo(p) { return p.desde ? Math.max(0, ANO_BASE - p.desde + 1) : null; }
+  function desc(f) {  // ordena do maior para o menor, sem dado por último
+    return function (a, b) {
+      var x = f(a), y = f(b);
+      return (x == null) - (y == null) || (y || 0) - (x || 0);
+    };
+  }
+
+  // ---- fichas
+  function numero(rotulo, valor) {
+    var d = el("div");
+    d.appendChild(el("b", null, valor));
+    d.appendChild(document.createTextNode(rotulo));
+    return d;
+  }
+  function ligacao(texto, url) {
+    var a = el("a", null, texto); a.href = url; a.target = "_blank"; a.rel = "noopener"; return a;
+  }
+
+  function ficha(p) {
+    var det = el("details", "ficha");
+    var sum = el("summary");
+    var img = el("img", "foto");
+    img.alt = ""; img.loading = "lazy";
+    var foto = linkSeguro(p.foto);
+    if (foto) { img.src = foto; img.onerror = function () { img.removeAttribute("src"); }; }
+    sum.appendChild(img);
+
+    var corpo = el("div");
+    corpo.appendChild(el("p", "nome", p.nome));
+    var cargo = p.casa === "Câmara" ? "Deputado(a) federal" : p.casa === "Senado" ? "Senador(a)" : "Sem mandato no Congresso em 2023–2026";
+    corpo.appendChild(el("p", "meta", [cargo, p.partido, p.uf].filter(Boolean).join(" · ")));
+
+    var pil = el("div", "pilulas");
+    if (p.eleito_2026) pil.appendChild(el("span", "pilula verde", "Eleito em 2026: " + p.eleito_2026));
+    if (p.casa && !p.em_exercicio) pil.appendChild(el("span", "pilula", "Fora do exercício"));
+    var qp = nProc(p);
+    if (qp) pil.appendChild(el("span", "pilula laranja", qp + (qp === 1 ? " processo registrado" : " processos registrados")));
+    if (pil.childNodes.length) corpo.appendChild(pil);
+
+    var nums = el("div", "numeros");
+    if (p.producao) {
+      nums.appendChild(numero("projetos", fmt.format(p.producao.projetos)));
+      nums.appendChild(numero("viraram norma", fmt.format(p.producao.viraram_norma)));
+    } else {
+      nums.appendChild(numero("projetos", "–"));
+    }
+    var v = pat(p);
+    nums.appendChild(numero(v == null ? "patrimônio declarado" : "declarado em " + patAno(p), reais(v)));
+    var c = crescimento(p);
+    if (c) nums.appendChild(numero("desde " + c.de, (c.pct >= 0 ? "+" : "") + fmt.format(Math.round(c.pct)) + "%"));
+    var t = tempo(p);
+    if (t != null) nums.appendChild(numero(t === 1 ? "ano de mandato" : "anos de mandato", fmt.format(t)));
+    corpo.appendChild(nums);
+    sum.appendChild(corpo);
+    det.appendChild(sum);
+
+    det.addEventListener("toggle", function () {
+      if (!det.open || det.dataset.pronto) return;
+      det.dataset.pronto = "1";
+      det.appendChild(detalhe(p));
+    });
+    return det;
+  }
+
+  function bloco(titulo) {
+    var d = el("div");
+    d.appendChild(el("h3", null, titulo));
+    return d;
+  }
+
+  function detalhe(p) {
+    var d = el("div", "detalhe");
+
+    var bp = bloco("Patrimônio declarado ao TSE");
+    var ks = anosPat(p);
+    if (ks.length) {
+      var ulb = el("ul");
+      ks.forEach(function (ano) {
+        var li = el("li");
+        li.appendChild(el("strong", null, ano + ": "));
+        li.appendChild(document.createTextNode("R$ " + fmt.format(Math.round(p.patrimonio[ano]))));
+        ulb.appendChild(li);
+      });
+      bp.appendChild(ulb);
+    } else {
+      bp.appendChild(el("p", "vazio", "Nenhuma declaração encontrada com este nome e estado."));
+    }
+    d.appendChild(bp);
+
+    if (!p.casa) {
+      var bo = bloco("Antes de 2026");
+      bo.appendChild(el("p", "vazio", (p.ocupacao_declarada ? "Ocupação declarada ao TSE: " + p.ocupacao_declarada + ". " : "") + "Produção no cargo anterior: a levantar."));
+      d.appendChild(bo);
+    }
+
+    if (p.producao) {
+      var bj = bloco("Projetos mais recentes");
+      var ul = el("ul");
+      (p.producao.recentes || []).forEach(function (r) {
+        var li = el("li");
+        var titulo = r.tipo + " " + r.numero + "/" + r.ano;
+        var url = linkSeguro(r.url);
+        li.appendChild(url ? ligacao(titulo, url) : el("strong", null, titulo));
+        li.appendChild(document.createTextNode(" " + (r.ementa || "")));
+        li.appendChild(el("span", null, [r.data, r.situacao].filter(Boolean).join(" · ")));
+        ul.appendChild(li);
+      });
+      if (!ul.childNodes.length) ul.appendChild(el("li", null, "Nenhum projeto de lei ou emenda à Constituição apresentado no período."));
+      bj.appendChild(ul);
+      bj.appendChild(el("p", "vazio", fmt.format(p.producao.proposicoes) + " proposições no total, " + fmt.format(p.producao.projetos_como_autor_principal) + " projetos como autor principal."));
+      d.appendChild(bj);
+    } else if (p.casa) {
+      var bx = bloco("Projetos");
+      bx.appendChild(el("p", "vazio", "Produção legislativa indisponível na última atualização."));
+      d.appendChild(bx);
+    }
+
+    var pr = bloco("Processos e inquéritos");
+    var regs = processos[p.chave] || [];
+    var ulp = el("ul");
+    regs.forEach(function (x) {
+      var li = el("li");
+      var t = [x.tribunal, x.tipo, x.numero].filter(Boolean).join(" · ");
+      var url = linkSeguro(x.link);
+      li.appendChild(url ? ligacao(t, url) : el("strong", null, t));
+      li.appendChild(el("span", null, [
+        x.situacao,
+        x.fonte_tipo === "imprensa" ? "Fonte: imprensa" : "Fonte: tribunal",
+        x.consultado_em ? "consultado em " + x.consultado_em : ""
+      ].filter(Boolean).join(" · ")));
+      ulp.appendChild(li);
+    });
+    if (!regs.length) ulp.appendChild(el("li", "vazio", "Nenhum registro ainda. Isso não significa que não existam processos."));
+    pr.appendChild(ulp);
+    d.appendChild(pr);
+
+    var pag = linkSeguro(p.pagina);
+    if (pag) d.appendChild(ligacao("Página oficial", pag));
+    return d;
+  }
+
+  // ---- filtros
+  function passa(p, ignorarPartido) {
+    var q = semAcento($("f-busca").value.trim());
+    var casa = $("f-casa").value, uf = $("f-uf").value, partido = $("f-partido").value;
+    var eleito = $("f-eleito").value, fp = $("f-patrimonio").value, ft = $("f-tempo").value;
+    if (q) {
+      var alvo = semAcento([p.nome, p.nome_civil, p.partido, p.uf].join(" "));
+      if (!q.split(/\s+/).every(function (termo) { return alvo.indexOf(termo) >= 0; })) return false;
+    }
+    if (casa === "novo" ? p.casa : (casa && p.casa !== casa)) return false;
+    if (uf && p.uf !== uf) return false;
+    if (!ignorarPartido && partido && p.partido !== partido) return false;
+    if (eleito === "sim" && !p.eleito_2026) return false;
+    if (eleito === "nao" && p.eleito_2026) return false;
+    if (fp) {
+      var v = pat(p);
+      if (fp === "sem") { if (v != null) return false; }
+      else if (v == null) return false;
+      else if (fp === "a" && !(v <= 1e6)) return false;
+      else if (fp === "b" && !(v > 1e6 && v <= 5e6)) return false;
+      else if (fp === "c" && !(v > 5e6 && v <= 2e7)) return false;
+      else if (fp === "d" && !(v > 2e7)) return false;
+    }
+    if (ft) {
+      var t = tempo(p);
+      if (t == null) return false;
+      if (ft === "a" && !(t <= 4)) return false;
+      if (ft === "b" && !(t > 4 && t <= 8)) return false;
+      if (ft === "c" && !(t > 8 && t <= 16)) return false;
+      if (ft === "d" && !(t > 16)) return false;
+    }
+    return true;
+  }
+
+  function ordenar(r) {
+    var o = $("f-ordem").value;
+    if (o === "menos") r.sort(function (a, b) { var x = nProj(a), y = nProj(b); return (x == null) - (y == null) || x - y; });
+    if (o === "mais") r.sort(desc(nProj));
+    if (o === "norma") r.sort(desc(nNorma));
+    if (o === "patrimonio") r.sort(desc(pat));
+    if (o === "crescimento") r.sort(desc(function (p) { var c = crescimento(p); return c ? c.pct : null; }));
+    if (o === "tempo") r.sort(desc(tempo));
+    if (o === "processos") r.sort(desc(nProc));
+    return r;
+  }
+
+  // ---- placar e gráfico
+  function placar(r) {
+    var comProd = r.filter(function (p) { return p.producao; });
+    var pats = r.map(pat).filter(function (v) { return v != null; });
+    $("n-total").textContent = fmt.format(r.length);
+    $("n-projetos").textContent = fmt.format(comProd.reduce(function (s, p) { return s + p.producao.projetos; }, 0));
+    $("n-norma").textContent = fmt.format(comProd.reduce(function (s, p) { return s + p.producao.viraram_norma; }, 0));
+    $("n-zero").textContent = fmt.format(comProd.filter(function (p) { return p.producao.projetos === 0; }).length);
+    $("n-milhao").textContent = pats.length ? fmt.format(pats.filter(function (v) { return v > 1e6; }).length) : "–";
+    $("n-mediana").textContent = reais(mediana(pats));
+  }
+
+  var METRICAS = {
+    qtd: { f: function (g) { return g.length; }, t: function (v) { return fmt.format(v); } },
+    proj: { f: function (g) { var c = g.filter(function (p) { return p.producao; }); return c.length ? c.reduce(function (s, p) { return s + p.producao.projetos; }, 0) / c.length : null; },
+            t: function (v) { return fmt1.format(v); } },
+    pat: { f: function (g) { return mediana(g.map(pat).filter(function (v) { return v != null; })); }, t: reais },
+    mi: { f: function (g) { var c = g.map(pat).filter(function (v) { return v != null; }); return c.length ? c.filter(function (v) { return v > 1e6; }).length / c.length * 100 : null; },
+          t: function (v) { return fmt.format(Math.round(v)) + "%"; } },
+    tempo: { f: function (g) { var c = g.map(tempo).filter(function (v) { return v != null; }); return c.length ? c.reduce(function (s, v) { return s + v; }, 0) / c.length : null; },
+             t: function (v) { return fmt1.format(v) + " anos"; } }
+  };
+
+  function grafico() {
+    var base = todos.filter(function (p) { return passa(p, true); });
+    var grupos = {};
+    base.forEach(function (p) { if (p.partido) (grupos[p.partido] = grupos[p.partido] || []).push(p); });
+    var m = METRICAS[$("g-metrica").value];
+    var linhas = Object.keys(grupos).map(function (k) { return { partido: k, n: grupos[k].length, v: m.f(grupos[k]) }; })
+      .filter(function (l) { return l.v != null; });
+    // os maiores partidos do recorte, ordenados pela medida escolhida
+    linhas.sort(function (a, b) { return b.n - a.n; });
+    var cortados = Math.max(0, linhas.length - MAX_BARRAS);
+    linhas = linhas.slice(0, MAX_BARRAS).sort(function (a, b) { return b.v - a.v; });
+    var max = linhas.reduce(function (s, l) { return Math.max(s, l.v); }, 0) || 1;
+    var sel = $("f-partido").value, caixa = $("barras");
+    caixa.textContent = "";
+    linhas.forEach(function (l) {
+      var b = el("button", "barra" + (l.partido === sel ? " ativa" : ""));
+      b.type = "button";
+      b.setAttribute("aria-pressed", l.partido === sel ? "true" : "false");
+      b.appendChild(el("span", "b-rotulo", l.partido));
+      var trilho = el("span", "b-trilho");
+      var fill = el("span", "b-fill");
+      fill.style.width = Math.max(1, l.v / max * 100) + "%";
+      trilho.appendChild(fill);
+      b.appendChild(trilho);
+      b.appendChild(el("span", "b-valor", m.t(l.v)));
+      b.addEventListener("click", function () {
+        $("f-partido").value = l.partido === sel ? "" : l.partido;
+        visiveis = PASSO; desenhar();
+      });
+      caixa.appendChild(b);
+    });
+    if (!linhas.length) caixa.appendChild(el("p", "vazio", "Sem dados para comparar neste recorte."));
+    $("g-nota").textContent = "Clique em um partido para filtrar a lista." +
+      (cortados ? " Aparecem os " + MAX_BARRAS + " maiores partidos do recorte." : "");
+  }
+
+  function desenhar() {
+    var r = ordenar(todos.filter(function (p) { return passa(p, false); }));
+    placar(r);
+    grafico();
+    var lista = $("lista");
+    lista.textContent = "";
+    r.slice(0, visiveis).forEach(function (p) { lista.appendChild(ficha(p)); });
+    $("contagem").textContent = todos.length ? fmt.format(r.length) + (r.length === 1 ? " resultado" : " resultados") : "";
+    $("mais").hidden = r.length <= visiveis;
+  }
+
+  function opcoes(id, valores) {
+    var s = $(id);
+    valores.sort().forEach(function (v) { var o = el("option", null, v); o.value = v; s.appendChild(o); });
+  }
+
+  Promise.all([
+    carregar("parlamentares.json", []),
+    carregar("processos.json", []),
+    carregar("status.json", {})
+  ]).then(function (x) {
+    todos = Array.isArray(x[0]) ? x[0] : [];
+    (Array.isArray(x[1]) ? x[1] : []).forEach(function (pr) {
+      if (!pr || !pr.chave) return;
+      (processos[pr.chave] = processos[pr.chave] || []).push(pr);
+    });
+    var st = x[2] || {};
+    opcoes("f-uf", Array.from(new Set(todos.map(function (p) { return p.uf; }).filter(Boolean))));
+    opcoes("f-partido", Array.from(new Set(todos.map(function (p) { return p.partido; }).filter(Boolean))));
+
+    var avisos = [];
+    if (!todos.length) avisos.push("O robô ainda não fez a primeira coleta. Os dados aparecem aqui depois da primeira execução.");
+    Object.keys(st.fontes || {}).forEach(function (k) {
+      var f = st.fontes[k];
+      if (!f.ok) avisos.push(f.nome + " não respondeu na última atualização" +
+        (f.dados_de ? "; exibindo a cópia de " + f.dados_de.slice(0, 10) + "." : "; ainda sem dados dessa fonte."));
+      else if (f.mensagem) avisos.push(f.nome + ": " + f.mensagem + ".");
+    });
+    if (avisos.length) { $("aviso").textContent = avisos.join(" "); $("aviso").hidden = false; }
+    $("rodape-status").textContent = st.ultima_execucao ? "Última atualização automática: " + st.ultima_execucao.slice(0, 10) + "." : "";
+    desenhar();
+  });
+
+  $("filtros").addEventListener("input", function () { visiveis = PASSO; desenhar(); });
+  $("filtros").addEventListener("reset", function () { setTimeout(function () { visiveis = PASSO; desenhar(); }, 0); });
+  $("g-metrica").addEventListener("input", grafico);
+  $("mais").addEventListener("click", function () { visiveis += PASSO; desenhar(); });
+})();
+</script>
+</body>
+</html>

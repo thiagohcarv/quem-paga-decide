@@ -1,0 +1,39 @@
+name: Atualizar dados
+
+on:
+  schedule:
+    - cron: "17 6 * * *"   # todo dia às 03h17 de Brasília
+  workflow_dispatch:        # botão "Run workflow" para rodar na hora
+
+permissions:
+  contents: write
+
+concurrency:
+  group: atualizar-dados
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Baixar dados oficiais
+        run: python robo/atualizar.py
+
+      - name: Guardar a cópia no repositório
+        run: |
+          git config user.name "robo-quem-paga-decide"
+          git config user.email "robo@users.noreply.github.com"
+          git add docs/dados
+          if git diff --cached --quiet; then
+            echo "Nada mudou desde a última execução."
+          else
+            git commit -m "Dados atualizados em $(date -u +%Y-%m-%d)"
+            git push
+          fi
