@@ -4,9 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quem Paga Decide</title>
-<meta name="description" content="Projetos, patrimônio declarado, tempo de mandato e processos de cada deputado e senador, com dados oficiais.">
+<meta name="description" content="O que cada deputado e senador fez com o seu voto: projetos, patrimônio declarado, tempo de mandato e resultado em 2026. Dados oficiais.">
+<meta property="og:title" content="Quem Paga Decide">
+<meta property="og:description" content="O que cada deputado e senador fez com o seu voto. Dados oficiais da Câmara, do Senado e do TSE.">
 <style>
-/* Minimalista: fundo liso, uma coluna, linhas finas. Verde e amarelo só nos detalhes. */
+/* Minimalista, celular primeiro: uma coluna, linhas finas. Verde e amarelo só nos detalhes. */
 :root {
   --fundo: #ffffff; --tinta: #111411; --suave: #5f665f; --linha: #e2e5e2;
   --verde: #00843d; --verde-claro: #e3f3e9; --amarelo: #ffd400; --amarelo-claro: #fff4b8;
@@ -21,148 +23,207 @@
   }
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--fundo); color: var(--tinta); font: 16px/1.55 var(--fonte);
-  border-top: 6px solid var(--verde); }
+body { margin: 0; background: var(--fundo); color: var(--tinta); font: 16px/1.55 var(--fonte); border-top: 6px solid var(--verde); }
 body::before { content: ""; display: block; height: 3px; background: var(--amarelo); }
-.pagina { max-width: 760px; margin: 0 auto; padding-inline: 20px; padding-block: 48px 72px; display: grid; gap: 32px; }
-h1 { font-size: clamp(1.9rem, 6vw, 2.8rem); font-weight: 700; line-height: 1.08; margin: 0; letter-spacing: -.02em; text-wrap: balance; }
+.pagina { max-width: 760px; margin: 0 auto; padding-inline: 18px; padding-block: 36px 72px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
+h1 { font-size: clamp(1.9rem, 7vw, 2.8rem); font-weight: 700; line-height: 1.08; margin: 0; letter-spacing: -.02em; text-wrap: balance; }
 h1 em { font-style: normal; background: linear-gradient(transparent 62%, var(--amarelo) 62%); }
 @media (prefers-color-scheme: dark) { h1 em { background: none; color: var(--amarelo); } }
-.sub { color: var(--suave); max-width: 58ch; margin: 14px 0 0; }
-.placar { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 20px 24px;
-  border-block: 1px solid var(--linha); padding-block: 20px; }
-.placar b { display: block; font: 500 1.6rem/1.1 var(--mono); font-variant-numeric: tabular-nums; }
-.placar span { font-size: .78rem; color: var(--suave); text-transform: uppercase; letter-spacing: .07em; }
-.filtros { display: flex; flex-wrap: wrap; gap: 8px; }
-.filtros input, .filtros select { font: inherit; color: inherit; background: var(--fundo); border: 1px solid var(--linha);
-  border-radius: 2px; padding: 9px 10px; min-width: 0; }
-.filtros input { flex: 1 1 100%; border-color: var(--tinta); }
-.filtros select { flex: 1 1 150px; }
+.sub { color: var(--suave); max-width: 58ch; margin: 12px 0 0; }
+h2 { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--suave); margin: 0 0 10px; }
 :focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+a { color: var(--verde); text-underline-offset: 3px; }
+[hidden] { display: none !important; }
+
+/* Estado */
+.estados { display: flex; flex-wrap: wrap; gap: 6px; }
+.uf { min-width: 44px; padding: 8px 6px; border: 1px solid var(--linha); background: var(--fundo); border-radius: 2px;
+  font: 600 .86rem var(--mono); }
+.uf[aria-pressed="true"] { background: var(--verde); border-color: var(--verde); color: var(--fundo); }
+.uf.todos { font-family: var(--fonte); padding-inline: 12px; }
+
+/* Atalhos */
+.atalhos { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.atalhos::-webkit-scrollbar { display: none; }
+.atalho { flex: none; padding: 8px 14px; border: 1px solid var(--tinta); background: var(--fundo); border-radius: 999px; font-size: .9rem; }
+.atalho[aria-pressed="true"] { background: var(--amarelo); border-color: var(--amarelo); color: #111411; font-weight: 600; }
+
+/* Placar */
+.placar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid var(--linha); }
+@media (max-width: 560px) { .placar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.placar > * { text-align: left; background: none; border: 0; padding: 14px 10px 14px 0; display: grid; gap: 2px; align-content: start; }
+.placar b { font: 500 1.5rem/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.placar span { font-size: .74rem; color: var(--suave); text-transform: uppercase; letter-spacing: .06em; }
+.placar button span::after { content: " →"; color: var(--verde); }
+.placar button:hover b, .placar button[aria-pressed="true"] b { text-decoration: underline; text-decoration-color: var(--amarelo); text-decoration-thickness: 4px; text-underline-offset: 5px; }
+
+/* Busca e filtros */
+.busca { width: 100%; font: inherit; color: inherit; background: var(--fundo); border: 1px solid var(--tinta); border-radius: 2px; padding: 11px 12px; }
+.mais-filtros { border-top: 1px solid var(--linha); }
+.mais-filtros summary { cursor: pointer; padding: 12px 0; font-weight: 600; font-size: .92rem; list-style: none; }
+.mais-filtros summary::-webkit-details-marker { display: none; }
+.mais-filtros summary::before { content: "+ "; color: var(--verde); }
+.mais-filtros[open] summary::before { content: "– "; }
+.grade-filtros { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; padding-bottom: 14px; }
+.grade-filtros select { font: inherit; color: inherit; background: var(--fundo); border: 1px solid var(--linha); border-radius: 2px; padding: 9px 10px; min-width: 0; width: 100%; }
+.ativos { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; background: var(--verde-claro); border: 0; border-radius: 2px; font-size: .84rem; color: var(--tinta); }
+.chip b { color: var(--verde); font-size: 1rem; line-height: 1; padding: 0 4px; }
+.limpar { background: none; border: 0; color: var(--suave); text-decoration: underline; text-underline-offset: 3px; font-size: .84rem; padding: 4px; }
 .contagem { color: var(--suave); font-size: .88rem; margin: 0; }
+
+/* Lista */
 .lista { display: grid; }
 .ficha { border-top: 1px solid var(--linha); }
 .ficha:last-child { border-bottom: 1px solid var(--linha); }
 .ficha[open] { border-top-color: var(--verde); }
-.ficha summary { list-style: none; cursor: pointer; padding-block: 18px; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; align-items: start; }
+.ficha summary { list-style: none; cursor: pointer; padding-block: 18px; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; align-items: start; }
 .ficha summary::-webkit-details-marker { display: none; }
 .foto { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--linha); }
 .nome { font-weight: 600; font-size: 1.05rem; margin: 0; overflow-wrap: anywhere; }
 .meta { color: var(--suave); font-size: .86rem; margin: 2px 0 10px; }
 .pilulas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.pilula { font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px;
+.pilula { font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 3px 8px;
   border-radius: 2px; border: 1px solid var(--linha); color: var(--suave); }
 .pilula.verde { background: var(--verde-claro); border-color: transparent; color: var(--verde); }
-.pilula.laranja, .pilula.amarelo { background: var(--amarelo-claro); border-color: transparent; color: var(--tinta); }
-.numeros { display: flex; flex-wrap: wrap; gap: 8px 28px; }
-.numeros div { font-size: .8rem; color: var(--suave); }
-.numeros b { display: block; font: 500 1.2rem/1.2 var(--mono); color: var(--tinta); font-variant-numeric: tabular-nums; }
-.detalhe { padding: 0 0 22px 60px; display: grid; gap: 18px; }
+.pilula.amarelo { background: var(--amarelo); border-color: transparent; color: #111411; }
+.pilula.palido { background: var(--amarelo-claro); border-color: transparent; color: var(--tinta); }
+.numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px 20px; }
+.num { font-size: .78rem; color: var(--suave); min-width: 0; }
+.num b { display: block; font: 500 1.15rem/1.2 var(--mono); color: var(--tinta); font-variant-numeric: tabular-nums; }
+.regua { position: relative; display: block; height: 4px; background: var(--linha); margin: 6px 0 4px; }
+.regua i { position: absolute; inset: 0 auto 0 0; background: var(--verde); }
+.regua s { position: absolute; top: -3px; bottom: -3px; left: 50%; width: 2px; background: var(--tinta); text-decoration: none; }
+.detalhe { padding: 0 0 22px 58px; display: grid; gap: 18px; }
 @media (max-width: 520px) { .detalhe { padding-left: 0; } }
 .detalhe h3 { font-size: .76rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--suave); margin: 0 0 8px; }
 .detalhe ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
 .detalhe li { font-size: .92rem; }
 .detalhe li span { color: var(--suave); display: block; font-size: .8rem; }
-a { color: var(--verde); text-underline-offset: 3px; }
+.acoes { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.compartilhar { background: var(--verde); color: var(--fundo); border: 0; border-radius: 2px; padding: 10px 16px; font-weight: 600; }
+.compartilhar.ok { background: var(--amarelo); color: #111411; }
+.vazio, .nota { color: var(--suave); font-size: .86rem; margin: 0; }
+.vazio-lista { padding: 28px 0; border-top: 1px solid var(--linha); display: grid; gap: 10px; justify-items: start; }
 .aviso { border-left: 3px solid var(--amarelo); padding: 4px 0 4px 14px; font-size: .92rem; margin: 0; }
-button.mais { font: inherit; font-weight: 600; color: var(--fundo); background: var(--verde); border: 0; border-radius: 2px;
-  padding: 11px 20px; cursor: pointer; justify-self: start; }
-footer { color: var(--suave); font-size: .84rem; display: grid; gap: 10px; }
-footer ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
-footer p { margin: 0; }
-[hidden] { display: none !important; }
-.filtros select { flex: 1 1 170px; }
-.limpar { font: inherit; color: var(--suave); background: none; border: 0; padding: 9px 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
-.grafico { display: grid; gap: 12px; }
-.grafico-topo { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
-.grafico h2 { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--suave); margin: 0; }
+button.mais { font-weight: 600; color: var(--fundo); background: var(--verde); border: 0; border-radius: 2px; padding: 11px 20px; justify-self: start; }
+
+/* Gráfico */
+.grafico-topo { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+.grafico-topo h2 { margin: 0; }
 .grafico select { font: inherit; color: inherit; background: var(--fundo); border: 1px solid var(--linha); border-radius: 2px; padding: 7px 10px; max-width: 100%; }
-#barras { display: grid; gap: 2px; }
-.barra { font: inherit; color: inherit; background: none; border: 0; padding: 5px 0; cursor: pointer; text-align: left;
-  display: grid; grid-template-columns: 5.5em minmax(0, 1fr) 6.5em; gap: 10px; align-items: center; }
+#barras { display: grid; gap: 2px; margin-top: 10px; }
+.barra { background: none; border: 0; padding: 5px 0; text-align: left; display: grid; grid-template-columns: 5.5em minmax(0, 1fr) 6.5em; gap: 10px; align-items: center; }
 .b-rotulo { font-size: .86rem; font-weight: 600; overflow-wrap: anywhere; }
 .b-trilho { display: block; height: 10px; background: var(--linha); }
 .b-fill { display: block; height: 100%; background: var(--verde); }
 .barra:hover .b-fill, .barra.ativa .b-fill { background: var(--amarelo); }
 .barra.ativa .b-rotulo { text-decoration: underline; text-decoration-color: var(--amarelo); text-decoration-thickness: 3px; text-underline-offset: 4px; }
 .b-valor { font: 500 .86rem var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
-.nota, .vazio { color: var(--suave); font-size: .84rem; margin: 0; }
-.detalhe .vazio { margin-top: 6px; }
+
+footer { color: var(--suave); font-size: .84rem; display: grid; gap: 10px; border-top: 1px solid var(--linha); padding-top: 18px; }
+footer ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+footer p { margin: 0; }
+@media (prefers-reduced-motion: no-preference) { .compartilhar, .atalho, .uf { transition: background-color .15s, color .15s; } }
 </style>
 </head>
 <body>
 <div class="pagina">
   <header>
     <h1>O que eles fizeram com o <em>seu voto</em></h1>
-    <p class="sub">Projetos, patrimônio declarado, tempo de mandato e processos de cada deputado e senador. Dados oficiais da Câmara, do Senado e do TSE, de 2023 em diante.</p>
+    <p class="sub">Projetos, patrimônio declarado, tempo de mandato e o resultado de 2026 de cada deputado e senador. Dados oficiais da Câmara, do Senado e do TSE, de 2023 em diante.</p>
   </header>
 
-  <section class="placar" aria-label="Resumo do recorte atual">
-    <div><b id="n-total">–</b><span>Parlamentares</span></div>
-    <div><b id="n-projetos">–</b><span>Projetos apresentados</span></div>
-    <div><b id="n-norma">–</b><span>Viraram norma</span></div>
-    <div><b id="n-zero">–</b><span>Sem nenhum projeto</span></div>
-    <div><b id="n-milhao">–</b><span>Declararam mais de R$ 1 milhão</span></div>
+  <section aria-labelledby="t-estado">
+    <h2 id="t-estado">Qual é o seu estado?</h2>
+    <div class="estados" id="estados"></div>
+  </section>
+
+  <section class="placar" id="placar" aria-label="Resumo do recorte atual">
+    <button type="button" data-recorte=""><b id="n-total">–</b><span>Parlamentares</span></button>
+    <button type="button" data-recorte="demitidos"><b id="n-demitidos">–</b><span>Demitidos em 2026</span></button>
+    <button type="button" data-recorte="experiencia"><b id="n-experiencia">–</b><span>Em período de experiência</span></button>
+    <button type="button" data-recorte="zero"><b id="n-zero">–</b><span>Sem nenhum projeto</span></button>
+    <button type="button" data-recorte="milhao"><b id="n-milhao">–</b><span>Declararam mais de R$ 1 milhão</span></button>
     <div><b id="n-mediana">–</b><span>Patrimônio mediano</span></div>
   </section>
 
   <p class="aviso" id="aviso" hidden></p>
 
-  <form class="filtros" id="filtros" onsubmit="return false">
-    <input id="f-busca" type="search" placeholder="Buscar por nome, partido ou estado" aria-label="Buscar por nome, partido ou estado">
-    <select id="f-casa" aria-label="Casa">
-      <option value="">Câmara e Senado</option>
-      <option value="Câmara">Câmara</option>
-      <option value="Senado">Senado</option>
-      <option value="novo">Sem mandato anterior no Congresso</option>
-    </select>
-    <select id="f-partido" aria-label="Partido"><option value="">Todos os partidos</option></select>
-    <select id="f-uf" aria-label="Estado"><option value="">Todos os estados</option></select>
-    <select id="f-eleito" aria-label="Eleição de 2026">
-      <option value="">Eleitos ou não em 2026</option>
-      <option value="sim">Eleitos em 2026</option>
-      <option value="nao">Não eleitos em 2026</option>
-    </select>
-    <select id="f-selo" aria-label="Resultado em 2026">
-      <option value="">Qualquer resultado em 2026</option>
-      <option value="demitido">Demitidos</option>
-      <option value="experiencia">Em período de experiência</option>
-      <option value="segundo_turno">No segundo turno</option>
-      <option value="nao_concorreu">Não concorreram</option>
-    </select>
-    <select id="f-patrimonio" aria-label="Patrimônio declarado">
-      <option value="">Qualquer patrimônio</option>
-      <option value="a">Até R$ 1 milhão</option>
-      <option value="b">R$ 1 a 5 milhões</option>
-      <option value="c">R$ 5 a 20 milhões</option>
-      <option value="d">Mais de R$ 20 milhões</option>
-      <option value="sem">Sem declaração encontrada</option>
-    </select>
-    <select id="f-tempo" aria-label="Tempo de mandato">
-      <option value="">Qualquer tempo de mandato</option>
-      <option value="a">Até 4 anos</option>
-      <option value="b">5 a 8 anos</option>
-      <option value="c">9 a 16 anos</option>
-      <option value="d">Mais de 16 anos</option>
-    </select>
-    <select id="f-ordem" aria-label="Ordenar">
-      <option value="nome">Ordem alfabética</option>
-      <option value="menos">Menos projetos primeiro</option>
-      <option value="mais">Mais projetos primeiro</option>
-      <option value="norma">Mais projetos que viraram norma</option>
-      <option value="patrimonio">Maior patrimônio declarado</option>
-      <option value="crescimento">Maior crescimento de patrimônio</option>
-      <option value="tempo">Mais tempo de mandato</option>
-      <option value="processos">Mais processos registrados</option>
-    </select>
-    <button type="reset" class="limpar" id="limpar">Limpar filtros</button>
-  </form>
+  <section aria-label="Buscar e filtrar">
+    <div class="atalhos" id="atalhos" role="group" aria-label="Atalhos">
+      <button type="button" class="atalho" data-recorte="demitidos">Demitidos</button>
+      <button type="button" class="atalho" data-recorte="experiencia">Em período de experiência</button>
+      <button type="button" class="atalho" data-recorte="zero">Nenhum projeto</button>
+      <button type="button" class="atalho" data-recorte="patrimonio">Maiores patrimônios</button>
+      <button type="button" class="atalho" data-recorte="crescimento">Patrimônio que mais cresceu</button>
+      <button type="button" class="atalho" data-recorte="tempo">Mais tempo de mandato</button>
+      <button type="button" class="atalho" data-recorte="segundo">No segundo turno</button>
+    </div>
+    <p style="margin:14px 0 0"><input id="f-busca" class="busca" type="search" placeholder="Buscar por nome ou partido" aria-label="Buscar por nome ou partido" autocomplete="off"></p>
+    <details class="mais-filtros" id="mais-filtros" style="margin-top:14px">
+      <summary>Mais filtros</summary>
+      <form class="grade-filtros" id="filtros" onsubmit="return false">
+        <select id="f-casa" aria-label="Casa">
+          <option value="">Câmara e Senado</option>
+          <option value="Câmara">Só Câmara</option>
+          <option value="Senado">Só Senado</option>
+          <option value="novo">Sem mandato anterior no Congresso</option>
+        </select>
+        <select id="f-partido" aria-label="Partido"><option value="">Todos os partidos</option></select>
+        <select id="f-exercicio" aria-label="Exercício">
+          <option value="">Em exercício ou não</option>
+          <option value="sim">Só em exercício</option>
+        </select>
+        <select id="f-selo" aria-label="Resultado em 2026">
+          <option value="">Qualquer resultado em 2026</option>
+          <option value="eleito">Eleitos em 2026</option>
+          <option value="demitido">Demitidos</option>
+          <option value="experiencia">Em período de experiência</option>
+          <option value="segundo_turno">No segundo turno</option>
+          <option value="nao_concorreu">Não concorreram</option>
+        </select>
+        <select id="f-patrimonio" aria-label="Patrimônio declarado">
+          <option value="">Qualquer patrimônio</option>
+          <option value="a">Até R$ 1 milhão</option>
+          <option value="b">R$ 1 a 5 milhões</option>
+          <option value="c">R$ 5 a 20 milhões</option>
+          <option value="d">Mais de R$ 20 milhões</option>
+          <option value="sem">Sem declaração encontrada</option>
+        </select>
+        <select id="f-tempo" aria-label="Tempo de mandato">
+          <option value="">Qualquer tempo de mandato</option>
+          <option value="a">Até 4 anos</option>
+          <option value="b">5 a 8 anos</option>
+          <option value="c">9 a 16 anos</option>
+          <option value="d">Mais de 16 anos</option>
+        </select>
+        <select id="f-ordem" aria-label="Ordenar">
+          <option value="nome">Ordem alfabética</option>
+          <option value="menos">Menos projetos primeiro</option>
+          <option value="mais">Mais projetos primeiro</option>
+          <option value="norma">Mais projetos que viraram norma</option>
+          <option value="patrimonio">Maior patrimônio declarado</option>
+          <option value="crescimento">Maior crescimento de patrimônio</option>
+          <option value="tempo">Mais tempo de mandato</option>
+          <option value="processos">Mais processos registrados</option>
+        </select>
+      </form>
+    </details>
+  </section>
+
+  <div class="ativos" id="ativos" aria-live="polite"></div>
+  <p class="contagem" id="contagem" aria-live="polite"></p>
+  <div class="lista" id="lista"></div>
+  <button class="mais" id="mais" type="button" hidden>Mostrar mais</button>
 
   <section class="grafico" aria-label="Comparação por partido">
     <div class="grafico-topo">
       <h2>Por partido</h2>
       <select id="g-metrica" aria-label="O que comparar">
         <option value="qtd">Número de parlamentares</option>
+        <option value="dem">Parcela de demitidos</option>
         <option value="proj">Projetos por parlamentar</option>
         <option value="pat">Patrimônio mediano</option>
         <option value="mi">Parcela que declarou mais de R$ 1 milhão</option>
@@ -170,24 +231,21 @@ footer p { margin: 0; }
       </select>
     </div>
     <div id="barras"></div>
-    <p class="nota" id="g-nota">Clique em um partido para filtrar a lista.</p>
+    <p class="nota" id="g-nota"></p>
   </section>
-
-  <p class="contagem" id="contagem"></p>
-  <div class="lista" id="lista"></div>
-  <button class="mais" id="mais" type="button" hidden>Mostrar mais</button>
 
   <footer>
     <p id="rodape-status"></p>
     <ul>
-      <li><strong>Projetos</strong> são PL, PLP e PEC em que o parlamentar assina como autor ou coautor. Requerimentos e outras proposições aparecem só no total geral.</li>
-      <li><strong>Viraram norma</strong> conta os projetos cuja situação oficial é "transformado em norma jurídica". Um projeto pode ser aprovado dentro de outro texto e não aparecer aqui.</li>
-      <li><strong>Patrimônio</strong> é a soma dos bens que o próprio candidato declarou ao TSE em 2018, 2022 e 2026, pelo valor declarado. Não é avaliação de mercado nem patrimônio líquido. O cruzamento é por nome completo e estado; sem correspondência, o campo fica vazio.</li>
-      <li><strong>Tempo de mandato</strong>: para deputados, conta desde a primeira legislatura em que exerceram mandato na Câmara, mesmo com intervalos. Para senadores, desde o início do mandato atual.</li>
-      <li><strong>Processos</strong> são registrados à mão, um a um, com número e link da fonte. Investigado ou réu não é condenado. Ausência de registro não significa ausência de processo.</li>
       <li><strong>Demitido</strong>: teve mandato de deputado federal ou senador entre 2023 e 2026, disputou qualquer cargo na eleição de 2026 e não foi eleito, segundo o resultado do TSE. Suplente não eleito conta como não eleito. Quem ainda disputa o segundo turno aparece como "No segundo turno"; quem não se candidatou, como "Não concorreu". Senador com mandato até 2031 continua no cargo e não recebe esse selo.</li>
       <li><strong>Em período de experiência</strong>: eleito em 2026 para deputado federal ou senador sem ter tido mandato no Congresso entre 2023 e 2026.</li>
       <li>Os selos de 2026 só aparecem depois que o TSE publica o resultado. O cruzamento com o TSE usa nome e data de nascimento; quando não dá para confirmar a pessoa, ou o TSE não informa o desfecho da candidatura, a ficha fica sem selo.</li>
+      <li><strong>Projetos</strong> são PL, PLP e PEC em que o parlamentar assina como autor ou coautor, desde 2023. Requerimentos e outras proposições aparecem só no total geral. "Sem nenhum projeto" considera apenas quem está em exercício, para não penalizar suplentes que passaram pouco tempo no cargo.</li>
+      <li><strong>Viraram norma</strong> conta os projetos cuja situação oficial é "transformado em norma jurídica". Um projeto pode ser aprovado dentro de outro texto e não aparecer aqui.</li>
+      <li><strong>Patrimônio</strong> é a soma dos bens que o próprio candidato declarou ao TSE em 2018, 2022 e 2026, pelo valor declarado. Não é avaliação de mercado nem patrimônio líquido. Variação de patrimônio pode ter muitas causas, como herança ou venda de bens, e não indica irregularidade.</li>
+      <li><strong>Comparação</strong>: a régua em cada ficha mostra a posição do parlamentar entre os colegas da mesma casa; o traço no meio é a mediana.</li>
+      <li><strong>Tempo de mandato</strong>: para deputados, conta desde a primeira legislatura em que exerceram mandato na Câmara, mesmo com intervalos. Para senadores, desde o início do mandato atual.</li>
+      <li><strong>Processos</strong> são registrados à mão, um a um, com número e link da fonte. Investigado ou réu não é condenado. Ausência de registro não significa ausência de processo.</li>
       <li>Eleitos em 2026 que não tinham mandato no Congresso aparecem sem produção legislativa: não existe base nacional única de vereadores, deputados estaduais e prefeitos.</li>
     </ul>
     <p>Fontes: <a href="https://dadosabertos.camara.leg.br/">Dados Abertos da Câmara</a>, <a href="https://www12.senado.leg.br/dados-abertos">Dados Abertos do Senado</a>, <a href="https://dadosabertos.tse.jus.br/">Portal de Dados Abertos do TSE</a>.</p>
@@ -197,8 +255,16 @@ footer p { margin: 0; }
 <script>
 (function () {
   "use strict";
-  var PASSO = 40, ANO_BASE = 2026, MAX_BARRAS = 14;
-  var todos = [], processos = {}, visiveis = PASSO;
+  var PASSO = 30, ANO_BASE = 2026, MAX_BARRAS = 14;
+  var UFS = ["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"];
+  var RECORTES = {
+    demitidos: "Demitidos", experiencia: "Em período de experiência", zero: "Nenhum projeto",
+    milhao: "Mais de R$ 1 milhão declarado", patrimonio: "Maiores patrimônios",
+    crescimento: "Patrimônio que mais cresceu", tempo: "Mais tempo de mandato", segundo: "No segundo turno"
+  };
+  var SELECTS = ["f-casa", "f-partido", "f-exercicio", "f-selo", "f-patrimonio", "f-tempo", "f-ordem"];
+  var todos = [], porId = {}, processos = {}, visiveis = PASSO;
+  var estado = { uf: "", recorte: "", foco: "" };
   var $ = function (id) { return document.getElementById(id); };
   var fmt = new Intl.NumberFormat("pt-BR");
   var fmt1 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
@@ -209,10 +275,10 @@ footer p { margin: 0; }
     if (texto != null) e.textContent = texto;
     return e;
   }
-  function semAcento(s) {
-    return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-  }
+  function semAcento(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
   function linkSeguro(url) { return /^https?:\/\//i.test(String(url || "")) ? url : null; }
+  function guardar(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function lembrar(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
   function carregar(arquivo, padrao) {
     return fetch("dados/" + arquivo, { cache: "no-store" })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -244,21 +310,67 @@ footer p { margin: 0; }
     if (k.length < 2) return null;
     var antes = p.patrimonio[k[k.length - 2]], depois = p.patrimonio[k[k.length - 1]];
     if (!(antes > 0)) return null;
-    return { de: k[k.length - 2], ate: k[k.length - 1], antes: antes, depois: depois, pct: (depois - antes) / antes * 100 };
+    return { de: k[k.length - 2], pct: (depois - antes) / antes * 100 };
   }
   function tempo(p) { return p.desde ? Math.max(0, ANO_BASE - p.desde + 1) : null; }
-  function desc(f) {  // ordena do maior para o menor, sem dado por último
-    return function (a, b) {
-      var x = f(a), y = f(b);
-      return (x == null) - (y == null) || (y || 0) - (x || 0);
-    };
+  function semProjeto(p) { return p.casa && p.em_exercicio && p.producao && p.producao.projetos === 0; }
+  function desc(f) {
+    return function (a, b) { var x = f(a), y = f(b); return (x == null) - (y == null) || (y || 0) - (x || 0); };
+  }
+  function cargoAtual(p) {
+    return p.casa === "Câmara" ? "Deputado(a) federal" : p.casa === "Senado" ? "Senador(a)" : "Sem mandato no Congresso em 2023–2026";
   }
 
-  // ---- fichas
-  function numero(rotulo, valor) {
-    var d = el("div");
+  // posição de cada um entre os colegas da mesma casa (0 a 100)
+  var percentis = {};
+  function calcularPercentis() {
+    ["Câmara", "Senado"].forEach(function (casa) {
+      [["proj", nProj], ["pat", pat]].forEach(function (par) {
+        var vals = todos.filter(function (p) { return p.casa === casa && p.em_exercicio; })
+          .map(par[1]).filter(function (v) { return v != null; }).sort(function (a, b) { return a - b; });
+        percentis[casa + par[0]] = vals;
+      });
+    });
+  }
+  function posicao(p, chave, v) {
+    var vals = percentis[p.casa + chave];
+    if (!vals || !vals.length || v == null) return null;
+    var abaixo = 0, iguais = 0;
+    for (var i = 0; i < vals.length; i++) { if (vals[i] < v) abaixo++; else if (vals[i] === v) iguais++; }
+    return Math.round((abaixo + iguais / 2) / vals.length * 100);
+  }
+  function frasePosicao(pc, casa) {
+    var grupo = casa === "Senado" ? "dos senadores" : "dos deputados";
+    if (pc >= 50) return "mais que " + pc + "% " + grupo;
+    return "menos que " + (100 - pc) + "% " + grupo;
+  }
+
+  // ---- selos
+  function selos(p) {
+    var r = [];
+    if (p.selo_2026 === "demitido") r.push(["amarelo", "Demitido", "Disputou " + (p.cargo_2026 || "um cargo") + " em 2026 e não foi eleito"]);
+    if (p.selo_2026 === "experiencia") r.push(["verde", "Em período de experiência", "Eleito em 2026 sem mandato no Congresso entre 2023 e 2026"]);
+    if (p.selo_2026 === "segundo_turno") r.push(["", "No segundo turno: " + p.cargo_2026, ""]);
+    if (p.selo_2026 === "nao_concorreu") r.push(["", "Não concorreu", ""]);
+    if (p.eleito_2026 && p.selo_2026 !== "experiencia") r.push(["verde", "Eleito em 2026: " + p.eleito_2026, ""]);
+    if (p.casa && !p.em_exercicio) r.push(["", "Fora do exercício", ""]);
+    var qp = nProc(p);
+    if (qp) r.push(["palido", qp + (qp === 1 ? " processo registrado" : " processos registrados"), ""]);
+    return r;
+  }
+
+  // ---- ficha
+  function numero(rotulo, valor, pc, casa) {
+    var d = el("div", "num");
     d.appendChild(el("b", null, valor));
     d.appendChild(document.createTextNode(rotulo));
+    if (pc != null) {
+      var r = el("span", "regua");
+      r.setAttribute("aria-hidden", "true");
+      var f = el("i"); f.style.width = pc + "%"; r.appendChild(f); r.appendChild(el("s"));
+      d.appendChild(r);
+      d.appendChild(el("span", null, frasePosicao(pc, casa)));
+    }
     return d;
   }
   function ligacao(texto, url) {
@@ -267,6 +379,7 @@ footer p { margin: 0; }
 
   function ficha(p) {
     var det = el("details", "ficha");
+    det.id = "f-" + p.id;
     var sum = el("summary");
     var img = el("img", "foto");
     img.alt = ""; img.loading = "lazy";
@@ -276,37 +389,23 @@ footer p { margin: 0; }
 
     var corpo = el("div");
     corpo.appendChild(el("p", "nome", p.nome));
-    var cargo = p.casa === "Câmara" ? "Deputado(a) federal" : p.casa === "Senado" ? "Senador(a)" : "Sem mandato no Congresso em 2023–2026";
-    corpo.appendChild(el("p", "meta", [cargo, p.partido, p.uf].filter(Boolean).join(" · ")));
-
+    corpo.appendChild(el("p", "meta", [cargoAtual(p), p.partido, p.uf].filter(Boolean).join(" · ")));
     var pil = el("div", "pilulas");
-    if (p.selo_2026 === "demitido") {
-      var dem = el("span", "pilula amarelo", "Demitido");
-      dem.title = "Disputou " + p.cargo_2026 + " em 2026 e não foi eleito";
-      pil.appendChild(dem);
-    }
-    if (p.selo_2026 === "experiencia") pil.appendChild(el("span", "pilula verde", "Em período de experiência"));
-    if (p.selo_2026 === "segundo_turno") pil.appendChild(el("span", "pilula", "No segundo turno: " + p.cargo_2026));
-    if (p.selo_2026 === "nao_concorreu") pil.appendChild(el("span", "pilula", "Não concorreu"));
-    if (p.eleito_2026) pil.appendChild(el("span", "pilula verde", "Eleito em 2026: " + p.eleito_2026));
-    if (p.casa && !p.em_exercicio) pil.appendChild(el("span", "pilula", "Fora do exercício"));
-    var qp = nProc(p);
-    if (qp) pil.appendChild(el("span", "pilula laranja", qp + (qp === 1 ? " processo registrado" : " processos registrados")));
+    selos(p).forEach(function (s) { var x = el("span", "pilula " + s[0], s[1]); if (s[2]) x.title = s[2]; pil.appendChild(x); });
     if (pil.childNodes.length) corpo.appendChild(pil);
 
     var nums = el("div", "numeros");
     if (p.producao) {
-      nums.appendChild(numero("projetos", fmt.format(p.producao.projetos)));
-      nums.appendChild(numero("viraram norma", fmt.format(p.producao.viraram_norma)));
-    } else {
-      nums.appendChild(numero("projetos", "–"));
+      nums.appendChild(numero(p.producao.viraram_norma === 1 ? "projetos, 1 virou norma" : "projetos, " + fmt.format(p.producao.viraram_norma) + " viraram norma",
+        fmt.format(p.producao.projetos), p.em_exercicio ? posicao(p, "proj", p.producao.projetos) : null, p.casa));
     }
     var v = pat(p);
-    nums.appendChild(numero(v == null ? "patrimônio declarado" : "declarado em " + patAno(p), reais(v)));
+    nums.appendChild(numero(v == null ? "patrimônio declarado" : "declarado em " + patAno(p), reais(v),
+      p.casa && p.em_exercicio ? posicao(p, "pat", v) : null, p.casa));
     var c = crescimento(p);
-    if (c) nums.appendChild(numero("desde " + c.de, (c.pct >= 0 ? "+" : "") + fmt.format(Math.round(c.pct)) + "%"));
+    if (c) nums.appendChild(numero("no patrimônio desde " + c.de, (c.pct >= 0 ? "+" : "") + fmt.format(Math.round(c.pct)) + "%"));
     var t = tempo(p);
-    if (t != null) nums.appendChild(numero(t === 1 ? "ano de mandato" : "anos de mandato", fmt.format(t)));
+    if (t != null) nums.appendChild(numero(t === 1 ? "ano desde o 1º mandato" : "anos desde o 1º mandato", fmt.format(t)));
     corpo.appendChild(nums);
     sum.appendChild(corpo);
     det.appendChild(sum);
@@ -319,14 +418,20 @@ footer p { margin: 0; }
     return det;
   }
 
-  function bloco(titulo) {
-    var d = el("div");
-    d.appendChild(el("h3", null, titulo));
-    return d;
-  }
+  function bloco(titulo) { var d = el("div"); d.appendChild(el("h3", null, titulo)); return d; }
 
   function detalhe(p) {
     var d = el("div", "detalhe");
+
+    if (p.selo_2026 === "demitido" || p.selo_2026 === "segundo_turno" || p.selo_2026 === "nao_concorreu" || p.eleito_2026) {
+      var b26 = bloco("Eleição de 2026");
+      var txt = p.selo_2026 === "demitido" ? "Disputou " + p.cargo_2026 + " e não foi eleito." :
+        p.selo_2026 === "segundo_turno" ? "Disputa o segundo turno para " + p.cargo_2026 + " em 25 de outubro." :
+        p.selo_2026 === "nao_concorreu" ? "Não se candidatou." :
+        "Eleito para " + p.eleito_2026 + ".";
+      b26.appendChild(el("p", "vazio", txt + " Fonte: TSE."));
+      d.appendChild(b26);
+    }
 
     var bp = bloco("Patrimônio declarado ao TSE");
     var ks = anosPat(p);
@@ -366,10 +471,6 @@ footer p { margin: 0; }
       bj.appendChild(ul);
       bj.appendChild(el("p", "vazio", fmt.format(p.producao.proposicoes) + " proposições no total, " + fmt.format(p.producao.projetos_como_autor_principal) + " projetos como autor principal."));
       d.appendChild(bj);
-    } else if (p.casa) {
-      var bx = bloco("Projetos");
-      bx.appendChild(el("p", "vazio", "Produção legislativa indisponível na última atualização."));
-      d.appendChild(bx);
     }
 
     var pr = bloco("Processos e inquéritos");
@@ -380,37 +481,87 @@ footer p { margin: 0; }
       var t = [x.tribunal, x.tipo, x.numero].filter(Boolean).join(" · ");
       var url = linkSeguro(x.link);
       li.appendChild(url ? ligacao(t, url) : el("strong", null, t));
-      li.appendChild(el("span", null, [
-        x.situacao,
-        x.fonte_tipo === "imprensa" ? "Fonte: imprensa" : "Fonte: tribunal",
-        x.consultado_em ? "consultado em " + x.consultado_em : ""
-      ].filter(Boolean).join(" · ")));
+      li.appendChild(el("span", null, [x.situacao, x.fonte_tipo === "imprensa" ? "Fonte: imprensa" : "Fonte: tribunal",
+        x.consultado_em ? "consultado em " + x.consultado_em : ""].filter(Boolean).join(" · ")));
       ulp.appendChild(li);
     });
     if (!regs.length) ulp.appendChild(el("li", "vazio", "Nenhum registro ainda. Isso não significa que não existam processos."));
     pr.appendChild(ulp);
     d.appendChild(pr);
 
+    var acoes = el("div", "acoes");
+    var btn = el("button", "compartilhar", "Compartilhar esta ficha");
+    btn.type = "button";
+    btn.addEventListener("click", function () { compartilhar(p, btn); });
+    acoes.appendChild(btn);
     var pag = linkSeguro(p.pagina);
-    if (pag) d.appendChild(ligacao("Página oficial", pag));
+    if (pag) acoes.appendChild(ligacao("Página oficial", pag));
+    d.appendChild(acoes);
     return d;
   }
 
+  // ---- compartilhar: só fatos, com fonte e link direto
+  function textoFicha(p) {
+    var linhas = [p.nome + " (" + [p.partido, p.uf].filter(Boolean).join("-") + "), " + cargoAtual(p).toLowerCase()];
+    if (p.producao) linhas.push("Projetos desde 2023: " + fmt.format(p.producao.projetos) + " (" + fmt.format(p.producao.viraram_norma) + " viraram norma)");
+    var v = pat(p);
+    if (v != null) linhas.push("Patrimônio declarado ao TSE em " + patAno(p) + ": R$ " + fmt.format(Math.round(v)));
+    var t = tempo(p);
+    if (t != null) linhas.push("Desde o 1º mandato: " + t + (t === 1 ? " ano" : " anos"));
+    if (p.selo_2026 === "demitido") linhas.push("Em 2026: disputou " + p.cargo_2026 + " e não foi eleito");
+    if (p.selo_2026 === "experiencia") linhas.push("Em 2026: eleito para " + p.eleito_2026 + " pela primeira vez no Congresso");
+    if (p.eleito_2026 && p.selo_2026 === "eleito") linhas.push("Em 2026: eleito para " + p.eleito_2026);
+    linhas.push("Fonte: dados oficiais da Câmara, do Senado e do TSE.");
+    return linhas.join("\n");
+  }
+  function compartilhar(p, btn) {
+    var url = location.origin + location.pathname + "#" + p.id;
+    var texto = textoFicha(p);
+    function feito(msg) {
+      btn.textContent = msg; btn.classList.add("ok");
+      setTimeout(function () { btn.textContent = "Compartilhar esta ficha"; btn.classList.remove("ok"); }, 2200);
+    }
+    if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+      navigator.share({ title: "Quem Paga Decide", text: texto, url: url }).catch(function () {});
+      return;
+    }
+    var completo = texto + "\n" + url;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(completo).then(function () { feito("Copiado. Cole no WhatsApp"); }, function () { manual(completo, btn); });
+    } else manual(completo, btn);
+  }
+  function manual(texto, btn) {
+    var ta = el("textarea"); ta.value = texto; ta.rows = 6; ta.style.width = "100%"; ta.readOnly = true;
+    btn.parentNode.parentNode.appendChild(ta); ta.select();
+  }
+
   // ---- filtros
+  function sel(id) { return $(id).value; }
   function passa(p, ignorarPartido) {
+    if (estado.foco) return p.id === estado.foco;
     var q = semAcento($("f-busca").value.trim());
-    var casa = $("f-casa").value, uf = $("f-uf").value, partido = $("f-partido").value;
-    var eleito = $("f-eleito").value, selo = $("f-selo").value, fp = $("f-patrimonio").value, ft = $("f-tempo").value;
     if (q) {
       var alvo = semAcento([p.nome, p.nome_civil, p.partido, p.uf].join(" "));
       if (!q.split(/\s+/).every(function (termo) { return alvo.indexOf(termo) >= 0; })) return false;
     }
+    if (estado.uf && p.uf !== estado.uf) return false;
+    var r = estado.recorte;
+    if (r === "demitidos" && p.selo_2026 !== "demitido") return false;
+    if (r === "experiencia" && p.selo_2026 !== "experiencia") return false;
+    if (r === "segundo" && p.selo_2026 !== "segundo_turno") return false;
+    if (r === "zero" && !semProjeto(p)) return false;
+    if (r === "milhao" && !(pat(p) > 1e6)) return false;
+    if ((r === "patrimonio") && pat(p) == null) return false;
+    if (r === "crescimento" && !crescimento(p)) return false;
+    if (r === "tempo" && tempo(p) == null) return false;
+
+    var casa = sel("f-casa");
     if (casa === "novo" ? p.casa : (casa && p.casa !== casa)) return false;
-    if (uf && p.uf !== uf) return false;
-    if (!ignorarPartido && partido && p.partido !== partido) return false;
-    if (eleito === "sim" && !p.eleito_2026) return false;
-    if (eleito === "nao" && p.eleito_2026) return false;
-    if (selo && p.selo_2026 !== selo) return false;
+    if (!ignorarPartido && sel("f-partido") && p.partido !== sel("f-partido")) return false;
+    if (sel("f-exercicio") === "sim" && !(p.casa && p.em_exercicio)) return false;
+    var s = sel("f-selo");
+    if (s && p.selo_2026 !== s) return false;
+    var fp = sel("f-patrimonio");
     if (fp) {
       var v = pat(p);
       if (fp === "sem") { if (v != null) return false; }
@@ -420,6 +571,7 @@ footer p { margin: 0; }
       else if (fp === "c" && !(v > 5e6 && v <= 2e7)) return false;
       else if (fp === "d" && !(v > 2e7)) return false;
     }
+    var ft = sel("f-tempo");
     if (ft) {
       var t = tempo(p);
       if (t == null) return false;
@@ -432,7 +584,12 @@ footer p { margin: 0; }
   }
 
   function ordenar(r) {
-    var o = $("f-ordem").value;
+    var o = sel("f-ordem");
+    if (o === "nome") {
+      if (estado.recorte === "patrimonio" || estado.recorte === "milhao") o = "patrimonio";
+      if (estado.recorte === "crescimento") o = "crescimento";
+      if (estado.recorte === "tempo") o = "tempo";
+    }
     if (o === "menos") r.sort(function (a, b) { var x = nProj(a), y = nProj(b); return (x == null) - (y == null) || x - y; });
     if (o === "mais") r.sort(desc(nProj));
     if (o === "norma") r.sort(desc(nNorma));
@@ -443,21 +600,52 @@ footer p { margin: 0; }
     return r;
   }
 
-  // ---- placar e gráfico
+  // ---- placar, chips ativos e gráfico
   function placar(r) {
-    var comProd = r.filter(function (p) { return p.producao; });
     var pats = r.map(pat).filter(function (v) { return v != null; });
     $("n-total").textContent = fmt.format(r.length);
-    $("n-projetos").textContent = fmt.format(comProd.reduce(function (s, p) { return s + p.producao.projetos; }, 0));
-    $("n-norma").textContent = fmt.format(comProd.reduce(function (s, p) { return s + p.producao.viraram_norma; }, 0));
-    $("n-zero").textContent = fmt.format(comProd.filter(function (p) { return p.producao.projetos === 0; }).length);
-    $("n-milhao").textContent = pats.length ? fmt.format(pats.filter(function (v) { return v > 1e6; }).length) : "–";
+    $("n-demitidos").textContent = fmt.format(r.filter(function (p) { return p.selo_2026 === "demitido"; }).length);
+    $("n-experiencia").textContent = fmt.format(r.filter(function (p) { return p.selo_2026 === "experiencia"; }).length);
+    $("n-zero").textContent = fmt.format(r.filter(semProjeto).length);
+    $("n-milhao").textContent = fmt.format(pats.filter(function (v) { return v > 1e6; }).length);
     $("n-mediana").textContent = reais(mediana(pats));
+  }
+
+  function chips() {
+    var box = $("ativos"); box.textContent = "";
+    var lista = [];
+    if (estado.foco && porId[estado.foco]) lista.push(["Ficha compartilhada: " + porId[estado.foco].nome, function () { estado.foco = ""; history.replaceState(null, "", location.pathname); }]);
+    if (estado.uf) lista.push(["Estado: " + estado.uf, function () { definirUf(""); }]);
+    if (estado.recorte) lista.push([RECORTES[estado.recorte], function () { estado.recorte = ""; }]);
+    if ($("f-busca").value.trim()) lista.push(["Busca: " + $("f-busca").value.trim(), function () { $("f-busca").value = ""; }]);
+    SELECTS.forEach(function (id) {
+      var s = $(id);
+      if (s.value && !(id === "f-ordem" && s.value === "nome")) lista.push([s.options[s.selectedIndex].text, function () { s.value = id === "f-ordem" ? "nome" : ""; }]);
+    });
+    lista.forEach(function (c) {
+      var b = el("button", "chip"); b.type = "button";
+      b.setAttribute("aria-label", "Remover filtro " + c[0]);
+      b.appendChild(document.createTextNode(c[0])); b.appendChild(el("b", null, "×"));
+      b.addEventListener("click", function () { c[1](); visiveis = PASSO; desenhar(); });
+      box.appendChild(b);
+    });
+    if (lista.length > 1) {
+      var l = el("button", "limpar", "Limpar tudo"); l.type = "button";
+      l.addEventListener("click", limparTudo); box.appendChild(l);
+    }
+  }
+  function limparTudo() {
+    estado.recorte = ""; estado.foco = ""; $("f-busca").value = "";
+    SELECTS.forEach(function (id) { $(id).value = id === "f-ordem" ? "nome" : ""; });
+    if (location.hash) history.replaceState(null, "", location.pathname);
+    visiveis = PASSO; desenhar();
   }
 
   var METRICAS = {
     qtd: { f: function (g) { return g.length; }, t: function (v) { return fmt.format(v); } },
-    proj: { f: function (g) { var c = g.filter(function (p) { return p.producao; }); return c.length ? c.reduce(function (s, p) { return s + p.producao.projetos; }, 0) / c.length : null; },
+    dem: { f: function (g) { var c = g.filter(function (p) { return p.casa && p.selo_2026; }); return c.length ? c.filter(function (p) { return p.selo_2026 === "demitido"; }).length / c.length * 100 : null; },
+           t: function (v) { return fmt.format(Math.round(v)) + "%"; } },
+    proj: { f: function (g) { var c = g.filter(function (p) { return p.producao && p.em_exercicio; }); return c.length ? c.reduce(function (s, p) { return s + p.producao.projetos; }, 0) / c.length : null; },
             t: function (v) { return fmt1.format(v); } },
     pat: { f: function (g) { return mediana(g.map(pat).filter(function (v) { return v != null; })); }, t: reais },
     mi: { f: function (g) { var c = g.map(pat).filter(function (v) { return v != null; }); return c.length ? c.filter(function (v) { return v > 1e6; }).length / c.length * 100 : null; },
@@ -473,44 +661,83 @@ footer p { margin: 0; }
     var m = METRICAS[$("g-metrica").value];
     var linhas = Object.keys(grupos).map(function (k) { return { partido: k, n: grupos[k].length, v: m.f(grupos[k]) }; })
       .filter(function (l) { return l.v != null; });
-    // os maiores partidos do recorte, ordenados pela medida escolhida
     linhas.sort(function (a, b) { return b.n - a.n; });
     var cortados = Math.max(0, linhas.length - MAX_BARRAS);
     linhas = linhas.slice(0, MAX_BARRAS).sort(function (a, b) { return b.v - a.v; });
     var max = linhas.reduce(function (s, l) { return Math.max(s, l.v); }, 0) || 1;
-    var sel = $("f-partido").value, caixa = $("barras");
+    var atual = sel("f-partido"), caixa = $("barras");
     caixa.textContent = "";
     linhas.forEach(function (l) {
-      var b = el("button", "barra" + (l.partido === sel ? " ativa" : ""));
+      var b = el("button", "barra" + (l.partido === atual ? " ativa" : ""));
       b.type = "button";
-      b.setAttribute("aria-pressed", l.partido === sel ? "true" : "false");
+      b.setAttribute("aria-pressed", l.partido === atual ? "true" : "false");
       b.appendChild(el("span", "b-rotulo", l.partido));
-      var trilho = el("span", "b-trilho");
-      var fill = el("span", "b-fill");
+      var trilho = el("span", "b-trilho"), fill = el("span", "b-fill");
       fill.style.width = Math.max(1, l.v / max * 100) + "%";
-      trilho.appendChild(fill);
-      b.appendChild(trilho);
+      trilho.appendChild(fill); b.appendChild(trilho);
       b.appendChild(el("span", "b-valor", m.t(l.v)));
       b.addEventListener("click", function () {
-        $("f-partido").value = l.partido === sel ? "" : l.partido;
+        $("f-partido").value = l.partido === atual ? "" : l.partido;
         visiveis = PASSO; desenhar();
+        $("ativos").scrollIntoView({ behavior: "smooth", block: "start" });
       });
       caixa.appendChild(b);
     });
     if (!linhas.length) caixa.appendChild(el("p", "vazio", "Sem dados para comparar neste recorte."));
-    $("g-nota").textContent = "Clique em um partido para filtrar a lista." +
-      (cortados ? " Aparecem os " + MAX_BARRAS + " maiores partidos do recorte." : "");
+    $("g-nota").textContent = "Toque em um partido para filtrar a lista." + (cortados ? " Aparecem os " + MAX_BARRAS + " maiores partidos do recorte." : "");
   }
 
   function desenhar() {
     var r = ordenar(todos.filter(function (p) { return passa(p, false); }));
     placar(r);
+    chips();
     grafico();
+    Array.prototype.forEach.call(document.querySelectorAll("[data-recorte]"), function (b) {
+      var ativo = b.dataset.recorte === estado.recorte && (b.dataset.recorte !== "" || !estado.recorte);
+      if (b.tagName === "BUTTON") b.setAttribute("aria-pressed", b.dataset.recorte && ativo ? "true" : "false");
+    });
     var lista = $("lista");
     lista.textContent = "";
     r.slice(0, visiveis).forEach(function (p) { lista.appendChild(ficha(p)); });
+    if (!r.length && todos.length) {
+      var v = el("div", "vazio-lista");
+      v.appendChild(el("p", null, "Ninguém neste recorte."));
+      var b = el("button", "limpar", "Limpar os filtros"); b.type = "button"; b.addEventListener("click", limparTudo);
+      v.appendChild(b); lista.appendChild(v);
+    }
     $("contagem").textContent = todos.length ? fmt.format(r.length) + (r.length === 1 ? " resultado" : " resultados") : "";
     $("mais").hidden = r.length <= visiveis;
+    if (estado.foco && r.length === 1) { var f = lista.querySelector("details"); if (f && !f.open) f.open = true; }
+  }
+
+  function definirUf(uf) {
+    estado.uf = uf; guardar("qpd-uf", uf);
+    Array.prototype.forEach.call(document.querySelectorAll(".uf"), function (b) {
+      b.setAttribute("aria-pressed", b.dataset.uf === uf ? "true" : "false");
+    });
+  }
+
+  function montarEstados() {
+    var box = $("estados");
+    var todosB = el("button", "uf todos", "Brasil todo"); todosB.type = "button"; todosB.dataset.uf = "";
+    box.appendChild(todosB);
+    UFS.forEach(function (uf) { var b = el("button", "uf", uf); b.type = "button"; b.dataset.uf = uf; box.appendChild(b); });
+    box.addEventListener("click", function (e) {
+      var b = e.target.closest(".uf"); if (!b) return;
+      estado.foco = ""; definirUf(b.dataset.uf); visiveis = PASSO; desenhar();
+    });
+  }
+
+  function ligarRecortes() {
+    document.addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-recorte]"); if (!b) return;
+      var r = b.dataset.recorte;
+      estado.foco = "";
+      estado.recorte = (r && estado.recorte === r) ? "" : r;
+      if (!r) { estado.recorte = ""; }
+      visiveis = PASSO; desenhar();
+      if (b.closest("#placar")) $("ativos").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function opcoes(id, valores) {
@@ -518,18 +745,19 @@ footer p { margin: 0; }
     valores.sort().forEach(function (v) { var o = el("option", null, v); o.value = v; s.appendChild(o); });
   }
 
-  Promise.all([
-    carregar("parlamentares.json", []),
-    carregar("processos.json", []),
-    carregar("status.json", {})
-  ]).then(function (x) {
+  montarEstados();
+  ligarRecortes();
+  definirUf(lembrar("qpd-uf"));
+
+  Promise.all([carregar("parlamentares.json", []), carregar("processos.json", []), carregar("status.json", {})]).then(function (x) {
     todos = Array.isArray(x[0]) ? x[0] : [];
+    todos.forEach(function (p) { porId[p.id] = p; });
     (Array.isArray(x[1]) ? x[1] : []).forEach(function (pr) {
       if (!pr || !pr.chave) return;
       (processos[pr.chave] = processos[pr.chave] || []).push(pr);
     });
+    calcularPercentis();
     var st = x[2] || {};
-    opcoes("f-uf", Array.from(new Set(todos.map(function (p) { return p.uf; }).filter(Boolean))));
     opcoes("f-partido", Array.from(new Set(todos.map(function (p) { return p.partido; }).filter(Boolean))));
 
     var avisos = [];
@@ -538,17 +766,24 @@ footer p { margin: 0; }
       var f = st.fontes[k];
       if (!f.ok) avisos.push(f.nome + " não respondeu na última atualização" +
         (f.dados_de ? "; exibindo a cópia de " + f.dados_de.slice(0, 10) + "." : "; ainda sem dados dessa fonte."));
-      else if (f.mensagem) avisos.push(f.nome + ": " + f.mensagem + ".");
     });
     if (avisos.length) { $("aviso").textContent = avisos.join(" "); $("aviso").hidden = false; }
-    $("rodape-status").textContent = st.ultima_execucao ? "Última atualização automática: " + st.ultima_execucao.slice(0, 10) + "." : "";
+    $("rodape-status").textContent = st.ultima_execucao ? "Última atualização automática: " + st.ultima_execucao.slice(0, 10).split("-").reverse().join("/") + "." : "";
+
+    var h = decodeURIComponent(location.hash.slice(1));
+    if (h && porId[h]) { estado.foco = h; definirUf(""); }
     desenhar();
+    if (estado.foco) $("ativos").scrollIntoView({ block: "start" });
   });
 
-  $("filtros").addEventListener("input", function () { visiveis = PASSO; desenhar(); });
-  $("filtros").addEventListener("reset", function () { setTimeout(function () { visiveis = PASSO; desenhar(); }, 0); });
+  $("filtros").addEventListener("input", function () { estado.foco = ""; visiveis = PASSO; desenhar(); });
+  $("f-busca").addEventListener("input", function () { estado.foco = ""; visiveis = PASSO; desenhar(); });
   $("g-metrica").addEventListener("input", grafico);
   $("mais").addEventListener("click", function () { visiveis += PASSO; desenhar(); });
+  window.addEventListener("hashchange", function () {
+    var h = decodeURIComponent(location.hash.slice(1));
+    if (h && porId[h]) { estado.foco = h; visiveis = PASSO; desenhar(); }
+  });
 })();
 </script>
 </body>
