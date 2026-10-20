@@ -158,13 +158,15 @@ def etapa_camara():
         print("aviso: lista de deputados em exercício indisponível:", e)
 
     # 3) nome civil (para cruzar com o TSE)
-    nome_civil, primeira_leg = {}, {}
+    nome_civil, primeira_leg, nascimento, falecimento = {}, {}, {}, {}
     try:
         r = baixar(f"{CAMARA}/arquivos/deputados/json/deputados.json")
         for d in r.get("dados") or []:
             m = re.search(r"(\d+)$", str(d.get("uri") or ""))
             if m:
                 nome_civil[int(m.group(1))] = d.get("nomeCivil") or ""
+                nascimento[int(m.group(1))] = d.get("dataNascimento") or ""
+                falecimento[int(m.group(1))] = d.get("dataFalecimento") or ""
                 try:
                     primeira_leg[int(m.group(1))] = int(d.get("idLegislaturaInicial"))
                 except (TypeError, ValueError):
@@ -221,6 +223,8 @@ def etapa_camara():
             "pagina": f"https://www.camara.leg.br/deputados/{i}",
             # ano de início da primeira legislatura em que exerceu mandato
             "desde": (2023 - 4 * (LEGISLATURA - primeira_leg[i])) if i in primeira_leg else None,
+            "nascimento": nascimento.get(i, ""),  # confirma o cruzamento com o TSE
+            "falecimento": falecimento.get(i, ""),
             "producao": resumo_producao(producao[i]),
         })
     return saida
@@ -348,6 +352,12 @@ def etapa_senado():
         atual = atuais.get(cod) or {}
         nome = ident.get("NomeParlamentar") or ""
         try:
+            basicos = achar(baixar(f"{SENADO}/senador/{cod}.json", tentativas=2), "DadosBasicosParlamentar") or {}
+        except Exception as e:
+            print(f"aviso: senador {cod} ({nome}), detalhe: {e}")
+            basicos = {}
+        fim = (mandato.get("SegundaLegislaturaDoMandato") or {}).get("DataFim") or ""
+        try:
             itens = senado_autorias(cod, nome)
         except Exception as e:
             print(f"aviso: senador {cod} ({nome}): {e}")
@@ -364,6 +374,9 @@ def etapa_senado():
             "em_exercicio": cod in atuais,
             "pagina": f"https://www25.senado.leg.br/web/senadores/senador/-/perfil/{cod}",
             "desde": desde,  # titular: início do mandato atual; suplente: quando assumiu
+            "mandato_ate": int(fim[:4]) if fim[:4].isdigit() else None,
+            "nascimento": basicos.get("DataNascimento") or "",
+            "falecimento": basicos.get("DataFalecimento") or "",
             "producao": resumo_producao(itens) if itens is not None else None,
         })
         time.sleep(0.3)
@@ -391,13 +404,40 @@ def csvs_do_zip(url):
                 yield from csv.DictReader(texto, delimiter=";")
 
 
+CARGOS = {
+    "DEPUTADO FEDERAL": "Deputado federal", "SENADOR": "Senador",
+    "1O SUPLENTE": "1º suplente de senador", "2O SUPLENTE": "2º suplente de senador",
+    "PRESIDENTE": "Presidente", "VICE-PRESIDENTE": "Vice-presidente",
+    "GOVERNADOR": "Governador", "VICE-GOVERNADOR": "Vice-governador",
+    "DEPUTADO ESTADUAL": "Deputado estadual", "DEPUTADO DISTRITAL": "Deputado distrital",
+}
+FEDERAIS = {"Deputado federal", "Senador"}
+
+
+def data_iso(texto):
+    """'27/10/1945' -> '1945-10-27'. Vazio se não for uma data."""
+    m = re.match(r"\s*(\d{2})/(\d{2})/(\d{4})", str(texto or ""))
+    return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else ""
+
+
+def resultado(situacao):
+    """Situação do TSE -> eleito, segundo_turno, nao_eleito ou indefinido."""
+    s = normalizar(situacao)
+    if s.startswith("ELEITO"):
+        return "eleito"
+    if "TURNO" in s:
+        return "segundo_turno"
+    if s in ("NAO ELEITO", "SUPLENTE"):
+        return "nao_eleito"
+    return "indefinido"  # "#NULO" e vazio: o arquivo não diz o desfecho
+
+
 def tse_candidatos(ano):
-    """Candidatos a deputado federal e senador naquele ano (eleitos ou não)."""
+    """Candidatos de todos os cargos naquele ano (eleitos ou não)."""
     cands, vistos = [], set()
     for linha in csvs_do_zip(f"{TSE}/consulta_cand/consulta_cand_{ano}.zip"):
-        cargo = normalizar(linha.get("DS_CARGO"))
-        if cargo not in ("DEPUTADO FEDERAL", "SENADOR"):
-            continue
+        bruto = normalizar(linha.get("DS_CARGO"))
+        cargo = CARGOS.get(bruto) or bruto.capitalize()
         sq = linha.get("SQ_CANDIDATO") or ""
         if not sq or sq in vistos:
             continue
@@ -408,12 +448,12 @@ def tse_candidatos(ano):
             "nome_urna": (linha.get("NM_URNA_CANDIDATO") or "").title(),
             "partido": linha.get("SG_PARTIDO") or "",
             "uf": linha.get("SG_UF") or "",
-            "cargo": "Senador" if cargo == "SENADOR" else "Deputado federal",
+            "cargo": cargo,
             "situacao": normalizar(linha.get("DS_SIT_TOT_TURNO")),
             "ocupacao": (linha.get("DS_OCUPACAO") or "").capitalize(),
-            "nascimento": linha.get("DT_NASCIMENTO") or "",
+            "nascimento": data_iso(linha.get("DT_NASCIMENTO")),
         })
-    if not cands:
+    if not any(c["cargo"] in FEDERAIS for c in cands):
         raise RuntimeError(f"arquivo de candidatos de {ano} veio sem deputados e senadores")
     return cands
 
@@ -442,18 +482,26 @@ def etapa_tse():
     if not isinstance(copia, dict):
         copia = {}
     saida = {"eleitos": copia.get("eleitos") or [],
+             "candidaturas_2026": copia.get("candidaturas_2026") or [],
+             "resultado_2026": bool(copia.get("resultado_2026")),
              "patrimonio": dict(copia.get("patrimonio") or {}),
              "avisos": []}
     algum = False
     for ano in ANOS_PATRIMONIO:
         try:
-            cands = tse_candidatos(ano)
+            todos = tse_candidatos(ano)
         except Exception as e:
             saida["avisos"].append(f"candidatos {ano}: {cortar(e, 120)}")
             continue
         algum = True
+        cands = [c for c in todos if c["cargo"] in FEDERAIS]
         if ano == ANO_ELEICAO:
-            eleitos = [c for c in cands if c["situacao"].startswith("ELEITO")]
+            # Todos os cargos de 2026, para os selos de quem tinha mandato.
+            saida["candidaturas_2026"] = [
+                {k: c[k] for k in ("sq", "nome", "nome_urna", "uf", "cargo", "situacao", "nascimento")}
+                for c in todos]
+            saida["resultado_2026"] = any(resultado(c["situacao"]) == "eleito" for c in cands)
+            eleitos = [c for c in cands if resultado(c["situacao"]) == "eleito"]
             if eleitos:
                 saida["eleitos"] = eleitos
             else:
@@ -491,38 +539,114 @@ def etapa_tse():
 
 # ------------------------------------------------------------------- junção
 
+POUCO_INFORMATIVOS = {"DE", "DA", "DO", "DOS", "DAS", "E", "JUNIOR", "FILHO", "NETO", "SOBRINHO"}
+
+
+def candidatura_2026(p, por_nascimento, por_nome):
+    """Acha a candidatura de 2026 de quem teve mandato.
+
+    Devolve (candidatura ou None, incerto, registros achados). Exige a mesma
+    data de nascimento do Congresso, o que permite achar quem concorreu por
+    outro estado sem confundir homônimos. Incerto = não dá para afirmar se
+    concorreu ou não.
+    """
+    nasc = str(p.get("nascimento") or "")[:10]
+    if not nasc:
+        return None, True, []
+    civil, parl = normalizar(p.get("nome_civil")), normalizar(p.get("nome"))
+    mesma_data = por_nascimento.get(nasc, [])
+    achadas = [c for c in mesma_data
+               if (civil and normalizar(c["nome"]) == civil) or (parl and normalizar(c["nome_urna"]) == parl)]
+    if not achadas:  # nome escrito de outro jeito: mesma data, mesmo estado e 2+ nomes em comum
+        tokens = set(civil.split()) - POUCO_INFORMATIVOS
+        achadas = [c for c in mesma_data if c["uf"] in (p["uf"], "BR")
+                   and len(tokens & set(normalizar(c["nome"]).split())) >= 2]
+    # Mais de um registro da mesma pessoa (ex.: candidatura anulada e trocada
+    # por outra): vale o único com desfecho informado.
+    com_desfecho = [c for c in achadas if resultado(c["situacao"]) != "indefinido"]
+    if len(achadas) > 1 and len(com_desfecho) == 1:
+        return com_desfecho[0], False, achadas
+    if len(achadas) == 1:
+        return achadas[0], False, achadas
+    if achadas:
+        return None, True, achadas
+    # Mesmo nome e estado, mas data diferente: pode ser erro de cadastro.
+    if f"C|{civil}|{p['uf']}" in por_nome or f"U|{parl}|{p['uf']}" in por_nome:
+        return None, True, []
+    return None, False, []
+
+
 def juntar(camara, senado, tse):
-    eleitos = (tse or {}).get("eleitos") or []
-    patrimonio = (tse or {}).get("patrimonio") or {}
+    tse = tse or {}
+    patrimonio = tse.get("patrimonio") or {}
+    candidaturas = tse.get("candidaturas_2026") or []
+    marcado = bool(tse.get("resultado_2026"))
     pessoas = list(camara) + list(senado)
-    # Nome civil do TSE com nome civil do Congresso; nome de urna com nome
-    # parlamentar. Misturar os dois aumenta a chance de trocar pessoas.
-    indice = {}
+
+    por_nascimento, por_nome = {}, set()
+    for c in candidaturas:
+        por_nascimento.setdefault(c["nascimento"], []).append(c)
+        por_nome.add(f"C|{normalizar(c['nome'])}|{c['uf']}")
+        por_nome.add(f"U|{normalizar(c['nome_urna'])}|{c['uf']}")
+
+    # Selos de 2026 (só depois que o TSE marcou o resultado):
+    #   demitido       tinha mandato, disputou qualquer cargo e não se elegeu
+    #   segundo_turno  tinha mandato e ainda disputa o 2º turno
+    #   eleito         tinha mandato e se elegeu (cargo em eleito_2026)
+    #   nao_concorreu  tinha mandato e não aparece entre os candidatos
+    #   experiencia    eleito deputado federal ou senador sem mandato em 2023-2026
+    # Sem selo: falecidos, cruzamento incerto, desfecho não informado pelo TSE
+    # e senador com mandato até 2031 que não estava em disputa.
+    usadas, nomes_congresso = set(), set()
     for p in pessoas:
-        p["eleito_2026"] = None
+        p["eleito_2026"], p["selo_2026"], p["cargo_2026"] = None, None, None
         for tipo, nome in (("C", p.get("nome_civil")), ("U", p.get("nome"))):
             if nome:
-                indice.setdefault(f"{tipo}|{normalizar(nome)}|{p['uf']}", p)
-    novos = []
-    for e in eleitos:
-        achado = (indice.get(f"C|{normalizar(e['nome'])}|{e['uf']}")
-                  or indice.get(f"U|{normalizar(e['nome_urna'])}|{e['uf']}"))
-        if achado:
-            achado["eleito_2026"] = e["cargo"]
+                nomes_congresso.add(f"{tipo}|{normalizar(nome)}|{p['uf']}")
+        cand, incerto, achadas = candidatura_2026(p, por_nascimento, por_nome)
+        usadas.update(c["sq"] for c in achadas)
+        if not marcado or incerto or p.get("falecimento"):
             continue
+        fica_ate_2031 = p["casa"] == "Senado" and (p.get("mandato_ate") or 0) >= 2031
+        if cand is None:
+            if not fica_ate_2031:
+                p["selo_2026"] = "nao_concorreu"
+            continue
+        r = resultado(cand["situacao"])
+        if r == "eleito":
+            p["eleito_2026"] = cand["cargo"]
+            p["selo_2026"] = "eleito"
+        elif r == "segundo_turno":
+            p["selo_2026"], p["cargo_2026"] = "segundo_turno", cand["cargo"]
+        elif r == "nao_eleito" and not fica_ate_2031:
+            p["selo_2026"], p["cargo_2026"] = "demitido", cand["cargo"]
+        elif r == "nao_eleito":
+            # perdeu outra disputa, mas o mandato no Senado continua até 2031
+            p["cargo_2026"] = cand["cargo"]
+
+    novos = []
+    for e in candidaturas:
+        if e["cargo"] not in FEDERAIS or resultado(e["situacao"]) != "eleito" or e["sq"] in usadas:
+            continue
+        # mesmo nome e estado de alguém do Congresso sem confirmação: sem selo
+        duvida = (f"C|{normalizar(e['nome'])}|{e['uf']}" in nomes_congresso
+                  or f"U|{normalizar(e['nome_urna'])}|{e['uf']}" in nomes_congresso)
+        extra = next((x for x in tse.get("eleitos") or [] if x.get("sq") == e["sq"]), {})
         novos.append({
             "id": f"tse-{e['sq']}",
             "casa": None,
             "nome": e["nome_urna"] or e["nome"],
             "nome_civil": e["nome"],
-            "partido": e["partido"],
+            "partido": extra.get("partido") or "",
             "uf": e["uf"],
             "foto": "",
             "em_exercicio": False,
             "pagina": "",
             "desde": None,
             "eleito_2026": e["cargo"],
-            "ocupacao_declarada": e["ocupacao"],
+            "selo_2026": None if duvida else "experiencia",
+            "cargo_2026": None,
+            "ocupacao_declarada": extra.get("ocupacao") or "",
             # Sem mandato no Congresso em 2023-2026: não há base única com o
             # histórico de vereadores, deputados estaduais e prefeitos.
             "producao": None,

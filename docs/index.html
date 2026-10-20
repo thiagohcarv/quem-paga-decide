@@ -53,7 +53,7 @@ h1 em { font-style: normal; background: linear-gradient(transparent 62%, var(--a
 .pilula { font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px;
   border-radius: 2px; border: 1px solid var(--linha); color: var(--suave); }
 .pilula.verde { background: var(--verde-claro); border-color: transparent; color: var(--verde); }
-.pilula.laranja { background: var(--amarelo-claro); border-color: transparent; color: var(--tinta); }
+.pilula.laranja, .pilula.amarelo { background: var(--amarelo-claro); border-color: transparent; color: var(--tinta); }
 .numeros { display: flex; flex-wrap: wrap; gap: 8px 28px; }
 .numeros div { font-size: .8rem; color: var(--suave); }
 .numeros b { display: block; font: 500 1.2rem/1.2 var(--mono); color: var(--tinta); font-variant-numeric: tabular-nums; }
@@ -123,6 +123,13 @@ footer p { margin: 0; }
       <option value="sim">Eleitos em 2026</option>
       <option value="nao">Não eleitos em 2026</option>
     </select>
+    <select id="f-selo" aria-label="Resultado em 2026">
+      <option value="">Qualquer resultado em 2026</option>
+      <option value="demitido">Demitidos</option>
+      <option value="experiencia">Em período de experiência</option>
+      <option value="segundo_turno">No segundo turno</option>
+      <option value="nao_concorreu">Não concorreram</option>
+    </select>
     <select id="f-patrimonio" aria-label="Patrimônio declarado">
       <option value="">Qualquer patrimônio</option>
       <option value="a">Até R$ 1 milhão</option>
@@ -178,6 +185,9 @@ footer p { margin: 0; }
       <li><strong>Patrimônio</strong> é a soma dos bens que o próprio candidato declarou ao TSE em 2018, 2022 e 2026, pelo valor declarado. Não é avaliação de mercado nem patrimônio líquido. O cruzamento é por nome completo e estado; sem correspondência, o campo fica vazio.</li>
       <li><strong>Tempo de mandato</strong>: para deputados, conta desde a primeira legislatura em que exerceram mandato na Câmara, mesmo com intervalos. Para senadores, desde o início do mandato atual.</li>
       <li><strong>Processos</strong> são registrados à mão, um a um, com número e link da fonte. Investigado ou réu não é condenado. Ausência de registro não significa ausência de processo.</li>
+      <li><strong>Demitido</strong>: teve mandato de deputado federal ou senador entre 2023 e 2026, disputou qualquer cargo na eleição de 2026 e não foi eleito, segundo o resultado do TSE. Suplente não eleito conta como não eleito. Quem ainda disputa o segundo turno aparece como "No segundo turno"; quem não se candidatou, como "Não concorreu". Senador com mandato até 2031 continua no cargo e não recebe esse selo.</li>
+      <li><strong>Em período de experiência</strong>: eleito em 2026 para deputado federal ou senador sem ter tido mandato no Congresso entre 2023 e 2026.</li>
+      <li>Os selos de 2026 só aparecem depois que o TSE publica o resultado. O cruzamento com o TSE usa nome e data de nascimento; quando não dá para confirmar a pessoa, ou o TSE não informa o desfecho da candidatura, a ficha fica sem selo.</li>
       <li>Eleitos em 2026 que não tinham mandato no Congresso aparecem sem produção legislativa: não existe base nacional única de vereadores, deputados estaduais e prefeitos.</li>
     </ul>
     <p>Fontes: <a href="https://dadosabertos.camara.leg.br/">Dados Abertos da Câmara</a>, <a href="https://www12.senado.leg.br/dados-abertos">Dados Abertos do Senado</a>, <a href="https://dadosabertos.tse.jus.br/">Portal de Dados Abertos do TSE</a>.</p>
@@ -270,6 +280,14 @@ footer p { margin: 0; }
     corpo.appendChild(el("p", "meta", [cargo, p.partido, p.uf].filter(Boolean).join(" · ")));
 
     var pil = el("div", "pilulas");
+    if (p.selo_2026 === "demitido") {
+      var dem = el("span", "pilula amarelo", "Demitido");
+      dem.title = "Disputou " + p.cargo_2026 + " em 2026 e não foi eleito";
+      pil.appendChild(dem);
+    }
+    if (p.selo_2026 === "experiencia") pil.appendChild(el("span", "pilula verde", "Em período de experiência"));
+    if (p.selo_2026 === "segundo_turno") pil.appendChild(el("span", "pilula", "No segundo turno: " + p.cargo_2026));
+    if (p.selo_2026 === "nao_concorreu") pil.appendChild(el("span", "pilula", "Não concorreu"));
     if (p.eleito_2026) pil.appendChild(el("span", "pilula verde", "Eleito em 2026: " + p.eleito_2026));
     if (p.casa && !p.em_exercicio) pil.appendChild(el("span", "pilula", "Fora do exercício"));
     var qp = nProc(p);
@@ -382,7 +400,7 @@ footer p { margin: 0; }
   function passa(p, ignorarPartido) {
     var q = semAcento($("f-busca").value.trim());
     var casa = $("f-casa").value, uf = $("f-uf").value, partido = $("f-partido").value;
-    var eleito = $("f-eleito").value, fp = $("f-patrimonio").value, ft = $("f-tempo").value;
+    var eleito = $("f-eleito").value, selo = $("f-selo").value, fp = $("f-patrimonio").value, ft = $("f-tempo").value;
     if (q) {
       var alvo = semAcento([p.nome, p.nome_civil, p.partido, p.uf].join(" "));
       if (!q.split(/\s+/).every(function (termo) { return alvo.indexOf(termo) >= 0; })) return false;
@@ -392,6 +410,7 @@ footer p { margin: 0; }
     if (!ignorarPartido && partido && p.partido !== partido) return false;
     if (eleito === "sim" && !p.eleito_2026) return false;
     if (eleito === "nao" && p.eleito_2026) return false;
+    if (selo && p.selo_2026 !== selo) return false;
     if (fp) {
       var v = pat(p);
       if (fp === "sem") { if (v != null) return false; }
